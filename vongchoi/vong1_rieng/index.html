@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đường Lên Đỉnh Olympia - Khởi Động</title>
+    <style>
+        /* ================= BASE STYLES ================= */
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: radial-gradient(circle at top center, #0a7ab0 0%, #04304f 50%, #01101d 100%); color: #ffffff; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; }
+        .active-screen { display: flex; }
+
+        /* ================= HEADER & FOOTER ================= */
+        .round-header { position: relative; padding: 1.4vh 3vw; font-size: clamp(20px, 4.2vh, 44px); font-weight: bold; text-transform: uppercase; color: #ffe27a; border-bottom: 2px solid #ffe27a; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 50; text-shadow: 0 0 10px rgba(0,0,0,0.8); flex-shrink: 0; }
+        .logo-link { position: absolute; left: 3vw; display: flex; align-items: center; gap: 20px; text-decoration: none; color: #ffd84d; cursor: pointer; transition: 0.3s; font-size: clamp(14px, 2.4vh, 26px); }
+        .logo-link:hover { color: #7fe3ff; text-shadow: 0 0 10px rgba(127, 227, 255, 0.67); }
+        .next-round-link { position: absolute; right: 3vw; display: flex; align-items: center; gap: 20px; text-decoration: none; color: #ffd84d; cursor: pointer; font-size: clamp(14px, 2.4vh, 26px); transition: 0.3s; }
+        .next-round-link:hover { color: #7fe3ff; text-shadow: 0 0 10px rgba(127, 227, 255, 0.67); }
+        .team-name-display { color: #8eeaff; text-align: center; text-shadow: 0 0 15px rgba(127, 227, 255, 0.67); }
+
+        .footer { display: flex; justify-content: space-around; padding: 1.2vh 2vw; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px); border-top: 2px solid #7fe3ff; z-index: 10; width: 100%; box-sizing: border-box; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); flex-shrink: 0; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; width: 45%; }
+        .stat-label { font-size: clamp(12px, 2vh, 22px); color: #e6f3fa; text-transform: uppercase; margin-bottom: 4px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        .stat-value { font-size: clamp(34px, 8vh, 96px); font-weight: bold; color: #ffd84d; text-shadow: 0 0 20px rgba(255, 216, 77, 0.8); line-height: 1; font-variant-numeric: tabular-nums; }
+        .timer { color: #ff416c; text-shadow: 0 0 20px rgba(255, 65, 108, 0.8); }
+
+        /* ================= MAIN CONTENT (không cuộn) ================= */
+        .main-content { flex: 1; min-height: 0; display: flex; padding: 2vh 2vw; width: 100%; box-sizing: border-box; overflow: hidden; }
+        .question-box { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2vh 3vw; background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(8px); border: 2px solid #7fe3ff; border-radius: 15px; box-shadow: 0 0 20px rgba(127, 227, 255, 0.4); box-sizing: border-box; overflow: hidden; }
+
+        .fit-box { flex: 1 1 0; min-height: 0; min-width: 0; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .fit-text { font-weight: 800; line-height: 1.28; text-align: center; overflow-wrap: anywhere; white-space: pre-wrap; color: #ffffff; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); max-width: 100%; }
+
+        .waiting-text { font-style: italic; color: #e6f3fa; font-size: clamp(20px, 4.4vh, 54px); text-shadow: 2px 2px 4px rgba(0,0,0,0.8); line-height: 1.4; }
+        .subject-tag { flex: 0 0 auto; color: #ffd84d; font-size: clamp(18px, 4.4vh, 52px); margin-bottom: 1.5vh; font-weight: bold; letter-spacing: 1px; text-shadow: 0 0 15px rgba(255, 216, 77, 0.55); }
+        .answer-reveal { flex: 0 0 auto; margin-top: 1.5vh; background: rgba(92, 240, 160, 0.2); border-left: 4px solid #5cf0a0; padding: 1vh 2vw; border-radius: 8px; color: #7dffb4; font-size: clamp(18px, 4vh, 48px); font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); animation: fadeInAns 0.3s; }
+        .answer-reveal span { color: #ffffff; }
+
+        /* ===== TỔNG KẾT: chia đều màn hình, không cuộn ===== */
+        .sum-grid { flex: 1 1 0; min-height: 0; width: 100%; display: grid; grid-auto-rows: minmax(0, 1fr); gap: 1.4vh 1.2vw; }
+        .sum-card { display: flex; flex-direction: column; gap: 0.6vh; min-height: 0; min-width: 0; overflow: hidden; text-align: left; background: rgba(255,255,255,0.05); border: 1px solid #7fe3ff; border-radius: 8px; padding: 1vh 1vw; box-shadow: 0 0 10px rgba(127,227,255,0.2); }
+        .sum-head { flex: 0 0 auto; color: #ffd84d; font-weight: bold; font-size: clamp(13px, 2.4vh, 28px); text-transform: uppercase; }
+        .sum-line { flex: 0 0 auto; color: #e6f3fa; font-size: clamp(12px, 2.1vh, 24px); }
+
+        @keyframes fadeInAns { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <div id="v1-screen" class="screen active-screen">
+        <div class="round-header">
+            <a class="logo-link" onclick="window.open('../../')"><span>◀ TRANG CHỦ</span></a>
+            <span class="team-name-display" id="display-team-name-v1">ĐANG TẢI...</span>
+            <a class="next-round-link" onclick="window.location.href='../vong1_chung/'"><span>VÒNG TIẾP THEO ▶</span></a>
+        </div>
+
+        <div class="main-content">
+            <div class="question-box" id="q-box-v1">
+                <div class="waiting-text">Đang chờ Ban Giám Khảo phát câu hỏi...</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="stat-box"><span class="stat-label">ĐIỂM SỐ</span><span class="stat-value" id="current-score-v1">0</span></div>
+            <div class="stat-box"><span class="stat-label">THỜI GIAN</span><span class="stat-value timer" id="time-left-v1">60.0</span></div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // FIREBASE: vong1_rieng/{match_state, question_bank}, diemso
+        // Thí sinh trả lời MIỆNG -> trang này chỉ hiển thị câu hỏi + đồng hồ + âm thanh (không nhập/nộp bài)
+        // ==========================================
+        const $ = id => document.getElementById(id);
+        const CFG_URL = "../../api/vong1_rieng.json";
+        const DEFAULT_DB = "../../api/vong1_rieng.json";
+        let DB = DEFAULT_DB, offset = 0, offAt = 0;
+        const dbReady = (async () => {
+            try {
+                const c = await (await fetch(CFG_URL + "?_t=" + Date.now())).json();
+                if (c && c.api_url) DB = String(c.api_url).replace(/\/[^\/]*\.json.*$/, "").replace(/\/$/, "");
+            } catch (e) {}
+        })();
+        async function fb(path, method = "GET", body) {
+            await dbReady;
+            const o = { method };
+            if (body !== undefined) { o.body = JSON.stringify(body); o.headers = { "Content-Type": "application/json" }; }
+            const r = await fetch(`${DB}/${path}.json` + (method === "GET" ? `?_t=${Date.now()}` : ""), o);
+            if (!r.ok) throw new Error("Firebase lỗi " + r.status);
+            return r.json();
+        }
+        async function ensureClock() {
+            if (offAt && Date.now() - offAt < 300000) return;
+            offAt = Date.now();
+            try {
+                const t0 = Date.now();
+                const sv = await fb("vong1_rieng/_sync", "PUT", { ".sv": "timestamp" });
+                const t1 = Date.now();
+                if (typeof sv === "number") { offset = sv - (t0 + t1) / 2; offAt = t1; }
+            } catch (e) {}
+        }
+        const nowS = () => Date.now() + offset;
+        const nat = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
+        const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        function listOf(o) {
+            if (!o) return [];
+            const e = Array.isArray(o) ? o.map((v, i) => [String(i), v]) : Object.entries(o);
+            return e.filter(x => x[1] != null).sort((a, b) => nat(a[0], b[0]));
+        }
+        const normList = pkg => listOf(pkg).map(([id, q]) => ({ id: id, linhVuc: q.linhvuc || ("Câu " + id), noiDung: q.cauhoi || "", dapAn: q.dapan || q.danan || "" }));
+        function teamsFrom(d) {
+            return Object.keys(d || {}).sort(nat).map((k, i) => ({ doi: k, tendoi: (d[k] && d[k].tendoi) || ("Đội " + (i + 1)), diem: parseInt(d[k] && d[k].diem) || 0 }));
+        }
+        // ===== TỰ CO CHỮ VỪA KHUNG (không cắt chữ, không phải cuộn) =====
+        // .fit-text nằm trong .fit-box (có chiều cao cố định); data-max / data-min tính theo % chiều cao màn hình (vh)
+        function fitAll() {
+            const vh = window.innerHeight / 100;
+            document.querySelectorAll('.fit-text').forEach(el => {
+                const box = el.parentElement;
+                if (!box || !box.clientHeight) return;
+                let hi = (parseFloat(el.dataset.max) || 6) * vh, lo = (parseFloat(el.dataset.min) || 1.6) * vh;
+                const ok = () => el.offsetHeight <= box.clientHeight && el.scrollWidth <= box.clientWidth + 1;
+                el.style.fontSize = hi + 'px';
+                if (ok()) return;
+                while (hi - lo > 1) {
+                    const mid = (hi + lo) / 2;
+                    el.style.fontSize = mid + 'px';
+                    if (ok()) lo = mid; else hi = mid;
+                }
+                el.style.fontSize = lo + 'px';
+            });
+        }
+        let fitQueued = false;
+        function scheduleFit() { if (fitQueued) return; fitQueued = true; requestAnimationFrame(() => { fitQueued = false; fitAll(); }); }
+        window.addEventListener('resize', scheduleFit);
+
+
+
+        // ==========================================
+        // TRẠNG THÁI
+        // ==========================================
+        let myTeamName = localStorage.getItem("olympia_team");           // tên đội (tendoi)
+        let myDoi = (localStorage.getItem("olympia_team_key") || "").toLowerCase();   // doi1, doi2...
+        let questions = [], pkgLoaded = "";
+        let endServer = null, frozenTime = null, running = false;
+        let currentServerQId = "", curKey = "";
+        let isRandomDelaying = false;
+        window.globalShowAnswer = false;
+
+        function put(html) {
+            const b = $('q-box-v1');
+            if (b._last !== html) { b.innerHTML = html; b._last = html; scheduleFit(); }
+        }
+        function resetLocal() { running = false; endServer = null; frozenTime = null; currentServerQId = ""; curKey = ""; }
+
+        window.onload = async function () {
+            if (!myTeamName) { window.location.href = 'index.html'; return; }
+            try {   // đối chiếu với danh sách đội trên Firebase
+                const ds = teamsFrom(await fb("diemso"));
+                const t = ds.find(x => x.tendoi === myTeamName) || ds.find(x => myDoi && x.doi === myDoi);
+                if (t) { myTeamName = t.tendoi; myDoi = t.doi; }
+            } catch (e) { console.error(e); }
+            if (!myDoi) { window.location.href = 'index.html'; return; }
+            $('display-team-name-v1').innerText = myTeamName;
+            poll(); pollScore();
+            setInterval(updateTimer, 50);
+        };
+
+        // ĐỌC ĐIỂM
+        async function pollScore() {
+            try {
+                const v = await fb("diemso/" + myDoi + "/diem");
+                if (v !== null && v !== undefined) $('current-score-v1').innerText = v;
+            } catch (e) { console.error("[Score]", e); }
+            finally { setTimeout(pollScore, 700); }
+        }
+
+        // ĐỒNG HỒ ĐẾM NGƯỢC (giờ server) + dừng nhạc khi hết giờ
+        function updateTimer() {
+            const el = $('time-left-v1');
+            if (frozenTime !== null) { el.innerText = frozenTime; return; }
+            if (!endServer) { el.innerText = "60.0"; return; }
+            const dist = endServer - nowS();
+            if (dist <= 0) {
+                el.innerText = "0.0";
+                running = false;
+            } else el.innerText = (dist / 1000).toFixed(1);
+        }
+
+        // HIỂN THỊ CÂU HỎI (chữ to, tự co vừa khung, không cuộn)
+        function renderCurrentQ(qIndex) {
+            const q = questions[qIndex];
+            if (!q) return;
+            let h = '<div class="subject-tag">[ CÂU ' + (qIndex + 1) + '/' + questions.length + ' ] - ' + esc(q.linhVuc) + '</div>';
+            h += '<div class="fit-box"><div class="fit-text" data-max="15" data-min="3">' + esc(q.noiDung) + '</div></div>';
+            if (window.globalShowAnswer === true) h += '<div class="answer-reveal">✔ Đáp án chuẩn: <span>' + esc(q.dapAn) + '</span></div>';
+            put(h);
+        }
+
+        // TỔNG KẾT SAU KHI MC CHẤM (chia đều màn hình)
+        function showSummary(answerStr) {
+            const parts = answerStr.split("(MC Chấm)").join("").trim().split("|");
+            const n = questions.length, cols = n <= 4 ? 2 : 3;
+            let h = '<div class="subject-tag" style="color:#8eeaff; text-shadow: 0 0 10px rgba(127, 227, 255, 0.67);">BẢNG ĐIỂM TỔNG KẾT</div>';
+            h += '<div class="sum-grid" style="grid-template-columns: repeat(' + cols + ', 1fr);">';
+            questions.forEach((q, idx) => {
+                const raw = (parts[idx] || "").trim();
+                let result = "", color = "#ffd84d";
+                const low = raw.toLowerCase();
+                if (low.match(/c\d+:\s*\d+/)) {
+                    const sv = low.split(":")[1].trim();
+                    if (sv === "10") { result = "✔ Đúng (+10đ)"; color = "#7dffb4"; }
+                    else if (sv === "0") { result = "✘ Sai (0đ)"; color = "#ff416c"; }
+                    else if (sv === "1") { result = "➖ Bỏ qua (0đ)"; color = "#aaaaaa"; }
+                } else {
+                    const i = raw.indexOf(":");
+                    result = i > -1 ? raw.substring(i + 1).trim() : raw;
+                    if (result === "" || result.toLowerCase().includes("bỏ qua") || result === "...") { result = "➖ Bỏ qua (0đ)"; color = "#aaaaaa"; }
+                }
+                h += '<div class="sum-card"><div class="sum-head">CÂU ' + (idx + 1) + ' - ' + esc(q.linhVuc) + '</div>' +
+                     '<div class="fit-box" style="justify-content:flex-start; align-items:flex-start;"><div class="fit-text" data-max="2.8" data-min="1.2" style="text-align:left; font-weight:600;">' + esc(q.noiDung) + '</div></div>' +
+                     '<div class="sum-line">Kết quả: <span style="color:' + color + '; font-weight:bold;">' + esc(result) + '</span></div>' +
+                     '<div class="sum-line">Đáp án chuẩn: <span style="color:#7dffb4; font-weight:bold;">' + esc(q.dapAn) + '</span></div></div>';
+            });
+            h += '</div>';
+            put(h);
+        }
+
+        // LẮNG NGHE TÍN HIỆU TỪ ADMIN
+        const SPECIAL = ["", "KET_THUC", "RESET_PKG", "PREPARE", "RANDOM", "Vong1"];
+        async function poll() {
+            try {
+                await ensureClock();
+                const ms = (await fb("vong1_rieng/match_state")) || {};
+                const pkg = String(ms.goihientai || "").toLowerCase();
+                if (pkg && pkg !== pkgLoaded) {
+                    questions = normList(await fb("vong1_rieng/question_bank/" + pkg));
+                    pkgLoaded = pkg;
+                }
+                window.globalShowAnswer = !!(ms.config && ms.config.show);
+                handle(ms, pkg);
+            } catch (e) { console.error("Lỗi mạng:", e); }
+            finally { setTimeout(poll, 500); }
+        }
+
+        function handle(ms, pkg) {
+            const id = String(ms.cauhoihientai == null ? "" : ms.cauhoihientai);
+            const turn = ms.doihientai === myTeamName;
+            const mine = (ms.dananthisinh && ms.dananthisinh[myDoi]) || "";
+            const graded = typeof mine === "string" && mine.includes("MC Chấm");
+
+            // ADMIN BỐC GÓI NGẪU NHIÊN (trì hoãn 2s cho khớp hiệu ứng trên màn hình khán giả)
+            if (turn && id === "RANDOM") {
+                if (currentServerQId !== "RANDOM" && !isRandomDelaying) {
+                    isRandomDelaying = true;
+                    put(`<div class="waiting-text" style="color:#ffd84d;">Ban Giám Khảo đang chọn gói câu hỏi...</div>`);
+                    setTimeout(() => {
+                        currentServerQId = "RANDOM"; endServer = null; frozenTime = null; running = false; curKey = "";
+                        const pretty = pkg.toUpperCase().replace("GOI", "GÓI ");
+                        put(`
+                            <div class="waiting-text" style="color:#5cf0a0; font-size:clamp(30px, 8vh, 90px); font-weight:bold; font-style:normal; text-transform:uppercase; text-shadow: 0 0 15px rgba(92, 240, 160, 0.8);">CHÚC MỪNG!</div>
+                            <div class="waiting-text" style="font-style:normal; color:#ffffff; margin-top:2vh;">Đội bạn đã TRÚNG VÀO: <span style="color:#ffd84d; font-weight:bold; font-size:1.5em; text-shadow: 0 0 15px rgba(255, 216, 77, 0.8);">${esc(pretty)}</span></div>
+                            <div class="waiting-text" style="font-size:clamp(16px, 3vh, 34px); margin-top:3vh;">Vui lòng chờ MC phát câu hỏi đầu tiên...</div>`);
+                        isRandomDelaying = false;
+                    }, 2000);
+                }
+                return;
+            }
+            if (isRandomDelaying) return;
+
+            // MC CHẤM XONG -> TỔNG KẾT
+            if (turn && id === "KET_THUC" && graded) {
+                running = false;
+                if (frozenTime === null) frozenTime = $('time-left-v1').innerText;
+                showSummary(mine);
+                return;
+            }
+
+            // ĐANG THI
+            if (turn && !SPECIAL.includes(id)) {
+                const idx = questions.findIndex(q => q.id == id);
+                const key = id + ":" + ms.thoigian;
+                if (idx !== -1 && curKey !== key) {
+                    curKey = key; currentServerQId = id; frozenTime = null;
+                    const st = Number(ms.thoigian);
+                    endServer = st > 0 ? st + 60000 : nowS() + 60000;
+                    running = true;
+                    renderCurrentQ(idx);
+                } else if (idx !== -1 && window.globalShowAnswer) {
+                    renderCurrentQ(idx);                            // MC mở đáp án -> hiện đáp án
+                }
+                return;
+            }
+
+            // ĐẾN LƯỢT MÌNH NHƯNG MC CHƯA PHÁT CÂU
+            if (turn && id === "PREPARE") {
+                resetLocal();
+                put(`<div class="waiting-text" style="color:#8eeaff;">Đội bạn chuẩn bị thi đấu...<br><span style="font-size:0.6em;">Vui lòng chờ Ban Giám Khảo chọn gói câu hỏi</span></div>`);
+                return;
+            }
+
+            // LÀM MỚI
+            if (id === "RESET_PKG" || id === "Vong1") {
+                resetLocal(); isRandomDelaying = false;
+                put('<div class="waiting-text">Đang chờ Ban Giám Khảo...</div>');
+                return;
+            }
+
+            // ĐỘI KHÁC ĐANG THI
+            if (!turn && ms.doihientai) {
+                resetLocal();
+                put('<div class="waiting-text" style="color:#8eeaff;">Đang theo dõi phần thi của đội: <br><strong style="color:#ffd84d; font-size:1.6em; text-shadow: 0 0 15px rgba(255, 216, 77, 0.5);">' + esc(ms.doihientai) + '</strong></div>');
+                return;
+            }
+
+            // MC ĐÃ ĐÓNG CÂU HỎI / CHƯA CHỌN ĐỘI
+            if (!ms.doihientai) {
+                resetLocal();
+                put('<div class="waiting-text">Đang chờ Ban Giám Khảo phát câu hỏi...</div>');
+            }
+        }
+    </script>
+</body>
+</html>

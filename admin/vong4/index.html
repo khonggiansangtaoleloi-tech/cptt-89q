@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Vòng 4.1 Về Đích</title>
+    <script>
+/* =====================================================================
+   V4 Core - Đọc riêng api_url từ ../../api/vong4.json và ../../api/diemso.json
+   ===================================================================== */
+window.V4 = (function () {
+  "use strict";
+  var CFG_ROUND = "../../api/vong4.json";
+  var CFG_SCORE = "../../api/diemso.json";
+  var ROUND_URL = "";
+  var SCORE_URL = "";
+  var cfgError = null;
+
+  function stripJson(u) {
+    return String(u || "").trim().replace(/\.json(\?.*)?$/i, "").replace(/\/$/, "");
+  }
+
+  var ready = (async function () {
+    try {
+      var results = await Promise.all([
+        fetch(CFG_ROUND + "?_t=" + Date.now()),
+        fetch(CFG_SCORE + "?_t=" + Date.now())
+      ]);
+      var r1 = results[0], r2 = results[1];
+
+      if (!r1.ok) throw new Error("Không đọc được " + CFG_ROUND + " (HTTP " + r1.status + ")");
+      var c1 = await r1.json();
+      if (!c1 || !c1.api_url) throw new Error("File " + CFG_ROUND + " thiếu trường api_url");
+      ROUND_URL = stripJson(c1.api_url);
+
+      if (r2.ok) {
+        var c2 = await r2.json();
+        if (c2 && c2.api_url) SCORE_URL = stripJson(c2.api_url);
+      }
+      if (!SCORE_URL) {
+        SCORE_URL = ROUND_URL.replace(/\/[^\/]+$/, "") + "/diemso";
+      }
+    } catch (e) {
+      cfgError = e;
+    }
+  })();
+
+  async function send(path, method, body) {
+    await ready;
+    if (!ROUND_URL) throw (cfgError || new Error("Chưa cấu hình api_url"));
+
+    var base, sub = "";
+    if (path === "diemso" || path.indexOf("diemso/") === 0) {
+      base = SCORE_URL;
+      sub = path.slice(6);
+    } else if (path === "vong4" || path.indexOf("vong4/") === 0) {
+      base = ROUND_URL;
+      sub = path.slice(5);
+    } else {
+      base = ROUND_URL.replace(/\/[^\/]+$/, "");
+      sub = "/" + path;
+    }
+
+    var o = { method: method };
+    if (body !== undefined) {
+      o.body = JSON.stringify(body);
+      o.headers = { "Content-Type": "application/json" };
+    }
+    var url = base + sub + ".json" + (method === "GET" ? "?_t=" + Date.now() : "");
+    var r = await fetch(url, o);
+    if (!r.ok) throw new Error("Firebase lỗi " + r.status + " (" + path + ")");
+    return r.json();
+  }
+
+  var nat = function (a, b) { return String(a).localeCompare(String(b), undefined, { numeric: true }); };
+
+  function teamsFrom(d) {
+    return Object.keys(d || {}).sort(nat).map(function (k, i) {
+      var v = d[k] || {};
+      return { doi: k, tendoi: v.tendoi || ("Đội " + (i + 1)), diem: parseInt(v.diem) || 0 };
+    });
+  }
+
+  function esc(s) {
+    return String(s === undefined || s === null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  return {
+    get: function (p) { return send(p, "GET"); },
+    patch: function (p, b) { return send(p, "PATCH", b); },
+    send: send,
+    teamsFrom: teamsFrom,
+    esc: esc
+  };
+})();
+    </script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f7; padding: 20px; color: #333; margin: 0; transition: opacity 0.3s; }
+        .header-panel { background: #800000; color: white; padding: 15px 25px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; box-shadow: 0 4px 10px rgba(0,0,0,0.15); margin-bottom: 20px; }
+        .header-panel h1 { margin: 0; font-size: 1.6rem; text-transform: uppercase; }
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 960px) { .grid-container { grid-template-columns: 1fr; } }
+
+        .panel { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .panel h3 { margin-top: 0; color: #003366; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .btn { padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; color: white; margin: 5px; transition: 0.2s; }
+        .btn:hover { opacity: 0.85; transform: translateY(-2px); }
+        .btn-start { background: #007bff; }
+        .btn-steal { background: #dc3545; font-size: 1.1em; }
+        .btn-ans { background: #28a745; font-size: 1.1em; }
+        .btn-star { background: #ffc107; color: black; border: 2px solid #e0a800; }
+        .btn-star.active { background: #e0a800; box-shadow: 0 0 15px gold; }
+
+        .control-group { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .control-group label { font-weight: bold; font-size: 1.05rem; }
+        .control-group select { padding: 9px 12px; border-radius: 6px; border: 2px solid #ccc; font-size: 1.05rem; font-weight: bold; color: #003366; outline: none; cursor: pointer; }
+        .control-group select:focus { border-color: #007bff; }
+        .btn-confirm-team { background: #28a745; color: white; padding: 10px 18px; border: none; border-radius: 6px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 6px rgba(40,167,69,0.3); }
+        .btn-confirm-team:hover { background: #218838; transform: translateY(-1px); }
+
+        .score-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px dashed #ccc; gap: 10px; }
+        .score-row:last-child { border-bottom: none; }
+        .score-team-info { font-size: 1.3rem; flex: 1; }
+        .score-val-display { color: #007bff; font-weight: 900; font-size: 2rem; }
+        .score-controls { display: flex; flex-wrap: nowrap; gap: 10px; justify-content: flex-end; align-items: center; }
+        .score-btn { border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; font-size: 1.8rem; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; transition: 0.15s; }
+        .score-btn:hover { filter: brightness(1.1); transform: scale(1.05); }
+        .score-btn-minus { background: #dc3545; }
+        .score-btn-plus { background: #28a745; }
+        .score-input-box { width: 70px; height: 39px; text-align: center; font-size: 1.6rem; font-weight: bold; border-radius: 8px; border: 2px solid #ccc; outline: none; color: #003366; }
+        .score-input-box:focus { border-color: #007bff; }
+
+        .btn-grid { background: #6f42c1; font-size: 1.2rem; padding: 12px 20px; width: 100%; margin: 0 0 15px 0; border: 2px solid #5a32a3; }
+
+        /* Nhóm nút trình chiếu Bảng Điểm & Kết thúc Vòng 4 */
+        .stage-control-box { display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #ddd; flex-wrap: wrap; }
+        .btn-show-scores { flex: 1; background: linear-gradient(135deg, #0062cc, #004085); font-size: 1.05rem; padding: 12px 15px; border: 2px solid #002752; box-shadow: 0 4px 10px rgba(0, 98, 204, 0.25); }
+        .btn-end-round4 { flex: 1; background: linear-gradient(135deg, #d4af37, #b8860b); color: #000; font-size: 1.05rem; padding: 12px 15px; border: 2px solid #8b6508; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4); text-transform: uppercase; }
+
+        .q-grids { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; }
+        .q-col { flex: 1; min-width: 220px; padding: 15px; border-radius: 10px; border: 3px solid; background: #fafafa; }
+        .q-col-20 { border-color: #28a745; }
+        .q-col-30 { border-color: #dc3545; }
+        .q-col-title { text-align: center; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; }
+        .q-col-20 .q-col-title { color: #28a745; }
+        .q-col-30 .q-col-title { color: #dc3545; }
+
+        .q-btn-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .q-btn { padding: 15px 0; font-size: 1.3rem; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; color: white; transition: 0.2s; }
+        .q-btn:hover { transform: scale(1.05); filter: brightness(1.1); }
+        .q-btn-20 { background: #28a745; }
+        .q-btn-30 { background: #dc3545; }
+        .q-btn.used { opacity: 0.25; pointer-events: none; filter: grayscale(100%); }
+
+        .active-q-info { background: #e6f7ff; border-left: 5px solid #007bff; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+        .active-q-info .lbl { font-size: 0.9rem; color: #555; text-transform: uppercase; font-weight: bold; }
+        .active-q-info .val { font-size: 1.15rem; color: #003366; font-weight: bold; margin-bottom: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+
+        /* ================= CUSTOM POPUP STYLES ================= */
+        #custom-popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(5px); animation: fadeIn 0.2s ease; }
+        .custom-popup-box { background: #fff; border-radius: 12px; padding: 30px; width: 450px; max-width: 90%; box-shadow: 0 15px 35px rgba(0,0,0,0.4); text-align: center; border-top: 5px solid #800000; animation: slideDown 0.3s ease; }
+        .custom-popup-box h3 { margin-top: 0; color: #800000; font-size: 1.5rem; text-transform: uppercase; margin-bottom: 15px; }
+        .custom-popup-box p { font-size: 1.15rem; color: #444; margin-bottom: 25px; line-height: 1.5; }
+        .custom-popup-btn-container { display: flex; justify-content: center; gap: 15px; }
+        .custom-popup-btn { padding: 10px 25px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem; transition: 0.2s; }
+        #custom-popup-btn-cancel { background: #6c757d; color: #fff; display: none; }
+        #custom-popup-btn-cancel:hover { background: #5a6268; }
+        #custom-popup-btn-ok { background: #800000; color: #fff; }
+        #custom-popup-btn-ok:hover { background: #660000; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div id="custom-popup-overlay">
+        <div class="custom-popup-box">
+            <h3 id="custom-popup-title">THÔNG BÁO</h3>
+            <p id="custom-popup-msg"></p>
+            <div class="custom-popup-btn-container">
+                <button class="custom-popup-btn" id="custom-popup-btn-cancel">HỦY</button>
+                <button class="custom-popup-btn" id="custom-popup-btn-ok">ĐỒNG Ý</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-panel">
+        <h1>BẢNG ĐIỀU KHIỂN MC - VÒNG 4.1</h1>
+        <div id="admin-status" style="font-weight: bold; color: #ffd700;">Đang tải dữ liệu từ Firebase...</div>
+    </div>
+
+    <div class="grid-container">
+        <div class="panel">
+            <h3>ĐIỀU KHIỂN TRẬN ĐẤU</h3>
+            <div class="control-group">
+                <label>Đội đang thi:</label>
+                <select id="selTeam"></select>
+                <button class="btn-confirm-team" id="btnConfirmTeam" onclick="confirmTeam()">📌 CHỐT ĐỘI THI</button>
+            </div>
+
+            <button class="btn btn-grid" onclick="openGrid()">🔲 2. MỞ LƯỚI CHỌN CÂU HỎI</button>
+
+            <div id="active-q-info" class="active-q-info">Đang chờ chọn câu hỏi...</div>
+
+            <button class="btn btn-star" id="btnStar" onclick="toggleStar()">⭐ BẬT/TẮT NGÔI SAO TỪ ADMIN</button>
+            <hr style="border:1px solid #eee; margin: 15px 0;">
+            <button class="btn btn-start" onclick="setGameState('TraLoi')">▶ BẮT ĐẦU 30S TRẢ LỜI</button>
+            <button class="btn btn-steal" onclick="setGameState('CuopDiem')">🚨 MỞ 5S CƯỚP ĐIỂM (Giơ tay)</button>
+            <button class="btn btn-ans" onclick="setGameState('HienDapAn')">✅ HIỆN ĐÁP ÁN CHÍNH THỨC</button>
+            <button class="btn" style="background:#6c757d;" onclick="setGameState('KetThuc')">⏹ XONG LƯỢT ĐỘI NÀY</button>
+
+            <div class="stage-control-box">
+                <button class="btn btn-show-scores" onclick="setGameState('BangDiem')">📊 HIỆN BẢNG ĐIỂM 4 ĐỘI (KHÁN GIẢ)</button>
+                <button class="btn btn-end-round4" onclick="setGameState('KetThucVong4')">🏆 KẾT THÚC VÒNG 4 & XẾP HẠNG</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>CHẤM ĐIỂM TRỰC TIẾP</h3>
+            <div id="score-board">Đang tải danh sách đội từ Firebase...</div>
+
+            <h3 style="margin-top: 30px;">3. LƯỚI CHỌN CÂU HỎI</h3>
+            <button class="btn" style="background:#dc3545; margin-bottom:10px;" onclick="resetGrid()">🔄 LÀM MỚI TOÀN BỘ LƯỚI CÂU HỎI</button>
+            <div class="q-grids">
+                <div class="q-col q-col-20">
+                    <div class="q-col-title">BẢNG 20 ĐIỂM</div>
+                    <div class="q-btn-grid" id="grid-20"></div>
+                </div>
+                <div class="q-col q-col-30">
+                    <div class="q-col-title">BẢNG 30 ĐIỂM</div>
+                    <div class="q-btn-grid" id="grid-30"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase: vong4/{20_1..30_12, TrangThaiV4}, diemso/{doiX: {diem, tendoi}}
+        const esc = V4.esc;
+
+        window.showCustomConfirm = function(msg, title = "XÁC NHẬN") {
+            return new Promise(resolve => {
+                document.getElementById('custom-popup-title').innerHTML = title;
+                document.getElementById('custom-popup-msg').innerHTML = msg;
+                document.getElementById('custom-popup-btn-cancel').style.display = 'inline-block';
+                document.getElementById('custom-popup-overlay').style.display = 'flex';
+
+                const btnOk = document.getElementById('custom-popup-btn-ok');
+                const btnCancel = document.getElementById('custom-popup-btn-cancel');
+
+                btnOk.onclick = function() {
+                    document.getElementById('custom-popup-overlay').style.display = 'none';
+                    resolve(true);
+                };
+                btnCancel.onclick = function() {
+                    document.getElementById('custom-popup-overlay').style.display = 'none';
+                    resolve(false);
+                };
+            });
+        };
+
+        window.teams = [];
+        window.allScores = {};
+        window.currentDoiDangThi = "";
+        window.currentUsedQuestions = "";
+        window.isStarActiveFromAdmin = false;
+        window.isDropdownInitialized = false;
+
+        let lastTeamsSignature = "";
+        let lastUsedSignature = null;
+        let scoreBusy = false;
+        let stateBusy = false;
+
+        // Chỉ cập nhật DOM khi nội dung thật sự thay đổi -> không nháy ảnh
+        function setHTML(el, html) {
+            if (!el || el._lastHtml === html) return;
+            el.innerHTML = html;
+            el._lastHtml = html;
+        }
+
+        
+        // Tự động tìm câu hỏi trong question_bank, CauHoiV4, cấp 1 hoặc bất kỳ nhánh con nào của vong4
+        function findQuestion(fullData, qId) {
+            if (!fullData || !qId) return null;
+            const key = String(qId);
+            let raw =
+                (fullData.question_bank && fullData.question_bank[key]) ||
+                (fullData.CauHoiV4 && fullData.CauHoiV4[key]) ||
+                fullData[key];
+
+            // Nếu chưa thấy -> quét sâu vào các nhánh con (kể cả dạng mảng hoặc object có trường id)
+            if (!raw || typeof raw !== 'object' || (!raw.cauhoi && !raw.noiDung)) {
+                raw = null;
+                const pools = [fullData.question_bank, fullData.CauHoiV4, fullData];
+                for (const pool of pools) {
+                    if (!pool || typeof pool !== 'object') continue;
+                    if (pool[key] && typeof pool[key] === 'object' && (pool[key].cauhoi || pool[key].noiDung)) {
+                        raw = pool[key];
+                        break;
+                    }
+                    const found = Object.values(pool).find(
+                        item => item && typeof item === 'object' && String(item.id) === key && (item.cauhoi || item.noiDung)
+                    );
+                    if (found) { raw = found; break; }
+                }
+            }
+
+            if (!raw || typeof raw !== 'object') return null;
+            return {
+                noiDung: raw.cauhoi || raw.noiDung || "",
+                dapAn: raw.danan || raw.dapAn || raw.dapan || "",
+                url: raw.url || raw.anh || raw.linkAnh || raw.hinhanh || raw.hinh_anh || raw.image || raw.img || raw.url_anh || ""
+            };
+        }
+
+        function resolveAdminImageUrl(qObj) {
+            if (!qObj) return null;
+            const raw = qObj.url || qObj.anh || qObj.linkAnh || qObj.hinhanh || qObj.hinh_anh || qObj.image || qObj.img || qObj.url_anh || "";
+            if (typeof raw !== "string") return null;
+            const imgName = raw.trim();
+            if (imgName === "" || imgName.toUpperCase() === "NULL" || imgName === "undefined") return null;
+
+            const driveMatch = imgName.match(/[-\w]{25,}/);
+            if (imgName.includes("drive.google.com") && driveMatch) {
+                return "https://drive.google.com/thumbnail?id=" + driveMatch[0] + "&sz=w600";
+            }
+            if (!imgName.includes(".") && !imgName.includes("/") && imgName.length >= 25) {
+                return "https://drive.google.com/thumbnail?id=" + imgName + "&sz=w600";
+            }
+            if (imgName.startsWith("http://") || imgName.startsWith("https://")) {
+                return imgName;
+            }
+            return "../../img/vong4/" + imgName;
+        }
+
+        function renderTeamsAndScores(teams) {
+            window.teams = teams;
+            teams.forEach(t => { window.allScores[t.doi] = t.diem; });
+
+            const board = document.getElementById('score-board');
+            if (!teams.length) {
+                setHTML(board, '<div style="color:red; font-weight:bold; font-size:1.1rem; padding: 20px 0;">Chưa có dữ liệu đội trong node diemso!</div>');
+                return;
+            }
+
+            const sig = teams.map(t => t.doi + ":" + t.tendoi).join("|");
+            if (sig === lastTeamsSignature) {
+                // Chỉ cập nhật con số điểm để không làm mất focus ô input
+                teams.forEach(t => {
+                    const el = document.getElementById(`display-score-${t.doi}`);
+                    if (el && el.innerText !== `${t.diem} đ`) el.innerText = `${t.diem} đ`;
+                });
+                return;
+            }
+
+            // Cập nhật dropdown chọn đội (giữ lại giá trị đang chọn nếu có)
+            const selTeam = document.getElementById('selTeam');
+            const prevSelected = selTeam.value;
+            selTeam.innerHTML = '';
+            teams.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.tendoi;
+                opt.textContent = t.tendoi;
+                selTeam.appendChild(opt);
+            });
+            if (prevSelected && teams.some(t => t.tendoi === prevSelected)) {
+                selTeam.value = prevSelected;
+            } else if (window.currentDoiDangThi && teams.some(t => t.tendoi === window.currentDoiDangThi)) {
+                selTeam.value = window.currentDoiDangThi;
+                window.isDropdownInitialized = true;
+            }
+
+            // Giữ lại giá trị và trạng thái focus các ô nhập điểm
+            const currentInputs = {};
+            let focusId = null;
+            document.querySelectorAll('input[id^="score-input-"]').forEach(inp => {
+                currentInputs[inp.id] = inp.value;
+                if (document.activeElement === inp) focusId = inp.id;
+            });
+
+            const scoreHtml = teams.map(t => `
+                <div class="score-row">
+                    <div class="score-team-info">
+                        <b>${esc(t.tendoi)}</b><br>
+                        <span class="score-val-display" id="display-score-${esc(t.doi)}">${t.diem} đ</span>
+                    </div>
+                    <div class="score-controls">
+                        <button class="score-btn score-btn-minus" onclick="changeScore('${esc(t.doi)}', -1)">-</button>
+                        <input type="number" id="score-input-${esc(t.doi)}" value="10" class="score-input-box" onclick="this.select()">
+                        <button class="score-btn score-btn-plus" onclick="changeScore('${esc(t.doi)}', 1)">+</button>
+                    </div>
+                </div>
+            `).join('');
+
+            board.innerHTML = scoreHtml;
+            lastTeamsSignature = sig;
+
+            Object.keys(currentInputs).forEach(id => {
+                const inp = document.getElementById(id);
+                if (inp) inp.value = currentInputs[id];
+            });
+            if (focusId) {
+                const f = document.getElementById(focusId);
+                if (f) f.focus();
+            }
+        }
+
+        window.changeScore = function(teamKey, sign) {
+            const inputEl = document.getElementById('score-input-' + teamKey);
+            if (!inputEl) return;
+            const pts = parseInt(inputEl.value) || 0;
+            if (pts > 0) window.updateScore(teamKey, pts * sign);
+        };
+
+        window.updateScore = async function(teamKey, pts) {
+            if (scoreBusy) return;
+            scoreBusy = true;
+            try {
+                const cur = parseInt(await V4.get("diemso/" + teamKey + "/diem")) || 0;
+                const newScore = cur + pts;
+                await V4.patch("diemso/" + teamKey, { diem: newScore });
+                window.allScores[teamKey] = newScore;
+                const scoreDisplay = document.getElementById(`display-score-${teamKey}`);
+                if (scoreDisplay) scoreDisplay.innerText = `${newScore} đ`;
+            } catch (err) {
+                console.error("Lỗi cập nhật điểm lên Firebase:", err);
+                alert("Không thể cập nhật điểm: " + err.message);
+            } finally {
+                scoreBusy = false;
+            }
+        };
+
+        async function sendStateUpdate(dataToUpdate) {
+            if (stateBusy) return;
+            stateBusy = true;
+            try {
+                await V4.patch("vong4/TrangThaiV4", dataToUpdate);
+                await pollOnce();
+            } catch (error) {
+                console.error("Lỗi cập nhật State:", error);
+                alert("Lỗi ghi dữ liệu lên Firebase: " + error.message);
+            } finally {
+                stateBusy = false;
+            }
+        }
+
+        function renderGameState(fullData) {
+            const dataStatus = (fullData && fullData.TrangThaiV4) || {};
+
+            window.currentDoiDangThi = dataStatus.doiDangThi || "";
+            window.currentUsedQuestions = dataStatus.usedQuestions || "";
+            window.isStarActiveFromAdmin = !!dataStatus.ngoiSao;
+
+            const statusEl = document.getElementById('admin-status');
+            statusEl.innerText = `Firebase OK | Trạng thái: [${dataStatus.trangThaiGame || 'Chờ'}] | Đang thi: ${dataStatus.doiDangThi || 'Chưa chốt'}`;
+            statusEl.style.color = "#ffd700";
+
+            const selTeam = document.getElementById('selTeam');
+            if (!window.isDropdownInitialized && selTeam.options.length > 0 && dataStatus.doiDangThi) {
+                selTeam.value = dataStatus.doiDangThi;
+                window.isDropdownInitialized = true;
+            }
+
+            renderGrids(window.currentUsedQuestions);
+
+            const btnStar = document.getElementById('btnStar');
+            const usedStarList = dataStatus.danhSachSao || "";
+            const usedStarArray = usedStarList ? usedStarList.split(',').map(s => s.trim()) : [];
+            const currentTeamHasUsedStar = window.currentDoiDangThi && usedStarArray.includes(window.currentDoiDangThi);
+
+            if (window.isStarActiveFromAdmin) {
+                btnStar.classList.add('active');
+                btnStar.innerText = "⭐ ĐANG BẬT NGÔI SAO HY VỌNG";
+            } else {
+                btnStar.classList.remove('active');
+                btnStar.innerText = currentTeamHasUsedStar
+                    ? "⭐ ĐÃ DÙNG (BẤM ĐỂ ÉP BẬT LẠI)"
+                    : "⭐ BẬT/TẮT NGÔI SAO TỪ ADMIN";
+            }
+
+            const activeQInfo = document.getElementById('active-q-info');
+            const qObj = dataStatus.cauHoiHienTai ? findQuestion(fullData, dataStatus.cauHoiHienTai) : null;
+
+            if (dataStatus.trangThaiGame === "BangDiem") {
+                setHTML(activeQInfo, `<div class="val" style="color:#0062cc;">📊 Đang trình chiếu BẢNG ĐIỂM 4 ĐỘI trên màn hình Khán giả.</div>`);
+            } else if (dataStatus.trangThaiGame === "KetThucVong4") {
+                setHTML(activeQInfo, `<div class="val" style="color:#b8860b;">🏆 Đang trình chiếu BẢNG XẾP HẠNG & TRAO CÚP trên màn hình Khán giả!</div>`);
+            } else if (qObj) {
+                const imgLink = resolveAdminImageUrl(qObj);
+                const adminImgHtml = imgLink
+                    ? `<div style="margin-top:10px;"><span class="lbl">Ảnh đính kèm:</span><br><img src="${esc(imgLink)}" style="max-height:130px; border-radius:6px; border:2px solid #007bff; margin-top:5px; background:#fff; padding:4px;" onerror="this.outerHTML='<div style=\\'color:#dc3545; font-weight:bold; margin-top:5px;\\'>⚠️ Lỗi đường dẫn ảnh</div>'"></div>`
+                    : "";
+
+                setHTML(activeQInfo, `
+                    <div class="lbl">Đang chọn: ID ${esc(dataStatus.cauHoiHienTai)} | ${esc(dataStatus.mucDiem)} Điểm</div>
+                    <div class="val">${esc(qObj.noiDung || "(Chưa có nội dung câu hỏi)")}</div>
+                    <div class="lbl">Đáp án chương trình:</div>
+                    <div class="val" style="color:#dc3545;">${esc(qObj.dapAn || "(Chưa có đáp án)")}</div>
+                    ${adminImgHtml}
+                `);
+            } else {
+                setHTML(activeQInfo, `Đội đang chốt trên màn hình: <b>${esc(dataStatus.doiDangThi || "Chưa có")}</b>.<br>Hãy bấm nút <b>MỞ LƯỚI</b> hoặc chọn câu hỏi bên phải!`);
+            }
+        }
+
+        function renderGrids(usedStr) {
+            if (usedStr === lastUsedSignature) return;
+            lastUsedSignature = usedStr;
+
+            const usedSet = new Set(usedStr ? usedStr.split(',').map(s => s.trim()).filter(Boolean) : []);
+            let html20 = '';
+            let html30 = '';
+
+            for (let i = 1; i <= 12; i++) {
+                const id20 = `20_${i}`;
+                const id30 = `30_${i}`;
+                html20 += `<button class="q-btn q-btn-20${usedSet.has(id20) ? ' used' : ''}" onclick="setQuestion('${id20}', 20)">${i}</button>`;
+                html30 += `<button class="q-btn q-btn-30${usedSet.has(id30) ? ' used' : ''}" onclick="setQuestion('${id30}', 30)">${i}</button>`;
+            }
+
+            document.getElementById('grid-20').innerHTML = html20;
+            document.getElementById('grid-30').innerHTML = html30;
+        }
+
+        async function pollOnce() {
+            const [v4, ds] = await Promise.all([V4.get("vong4"), V4.get("diemso")]);
+            renderTeamsAndScores(V4.teamsFrom(ds || {}));
+            renderGameState(v4 || {});
+        }
+
+        async function pollAdmin() {
+            try {
+                await pollOnce();
+            } catch (error) {
+                const statusEl = document.getElementById('admin-status');
+                statusEl.innerText = "⚠️ LỖI: " + error.message;
+                statusEl.style.color = "#ff4b2b";
+            } finally {
+                setTimeout(pollAdmin, 1000);
+            }
+        }
+
+        window.confirmTeam = async function() {
+            const team = document.getElementById('selTeam').value;
+            if (!team) return;
+
+            window.currentDoiDangThi = team;
+            await sendStateUpdate({
+                trangThaiGame: "ChonCauHoi",
+                doiDangThi: team,
+                cauHoiHienTai: "",
+                ngoiSao: false,
+                thoiGianKetThuc: 0,
+                timerTrigger: 0
+            });
+
+            const btn = document.getElementById('btnConfirmTeam');
+            const oldText = btn.innerHTML;
+            btn.innerHTML = `✅ ĐÃ CHỐT: ${esc(team)}`;
+            btn.style.background = "#17a2b8";
+            setTimeout(() => {
+                btn.innerHTML = oldText;
+                btn.style.background = "#28a745";
+            }, 1500);
+        };
+
+        window.resetGrid = async function() {
+            const isConfirm = await showCustomConfirm("Bạn có chắc chắn muốn <b>làm mới toàn bộ Lưới</b>?<br>Tất cả các câu hỏi đã chọn trước đó sẽ sáng lại.");
+            if (!isConfirm) return;
+            sendStateUpdate({ usedQuestions: "" });
+        };
+
+        window.openGrid = function() {
+            const team = window.currentDoiDangThi || document.getElementById('selTeam').value;
+            sendStateUpdate({ trangThaiGame: "ChonCauHoi", doiDangThi: team, cauHoiHienTai: "", timerTrigger: 0 });
+        };
+
+        window.toggleStar = function() {
+            sendStateUpdate({ ngoiSao: !window.isStarActiveFromAdmin });
+        };
+
+        window.setGameState = function(state) {
+            const team = window.currentDoiDangThi || document.getElementById('selTeam').value;
+            const updateData = { trangThaiGame: state, doiDangThi: team };
+            const triggerID = Date.now();
+
+            if (state === 'TraLoi') {
+                updateData.thoiGianKetThuc = 30000;
+                updateData.timerTrigger = triggerID;
+            } else if (state === 'CuopDiem') {
+                updateData.thoiGianKetThuc = 5000;
+                updateData.timerTrigger = triggerID;
+            } else {
+                updateData.thoiGianKetThuc = 0;
+                updateData.timerTrigger = 0;
+            }
+
+            sendStateUpdate(updateData);
+        };
+
+        window.setQuestion = function(id, diem) {
+            const team = window.currentDoiDangThi || document.getElementById('selTeam').value;
+            const usedArr = window.currentUsedQuestions ? window.currentUsedQuestions.split(',').map(s => s.trim()).filter(Boolean) : [];
+            if (!usedArr.includes(id)) usedArr.push(id);
+
+            sendStateUpdate({
+                cauHoiHienTai: id,
+                mucDiem: diem,
+                doiDangThi: team,
+                trangThaiGame: "Cho",
+                usedQuestions: usedArr.join(','),
+                ngoiSao: false,
+                thoiGianKetThuc: 0,
+                timerTrigger: 0
+            });
+        };
+
+        window.onload = pollAdmin;
+    </script>
+</body>
+</html>

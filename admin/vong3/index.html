@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympia Admin Dashboard - Vòng 3</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+/* =====================================================================
+   api/v3-core.js - Lõi dùng chung cho Vòng 3 (admin / vongchoi / khgia)
+   Đọc/ghi trực tiếp Firebase Realtime Database (REST). Không dùng PHP.
+   Tự tìm URL gốc từ api/vong3.json ({"api_url": ".../vong3.json"}).
+   ===================================================================== */
+window.V3 = (function () {
+  "use strict";
+  var DEFAULT_DB = "../../api/vong3.json";
+  var DB = DEFAULT_DB, offset = 0, offAt = 0;
+  var CFG = "../../api/vong3.json";
+
+  var ready = (async function () {
+    try {
+      var c = await (await fetch(CFG + "?_t=" + Date.now())).json();
+      if (c && c.api_url) DB = String(c.api_url).replace(/\/[^\/]*\.json.*$/, "").replace(/\/$/, "");
+    } catch (e) { /* dùng DEFAULT_DB */ }
+  })();
+
+  // ---------- REST ----------
+  async function send(path, method, body) {
+    await ready;
+    var o = { method: method };
+    if (body !== undefined) { o.body = JSON.stringify(body); o.headers = { "Content-Type": "application/json" }; }
+    var r = await fetch(DB + "/" + path + ".json" + (method === "GET" ? "?_t=" + Date.now() : ""), o);
+    if (!r.ok) throw new Error("Firebase lỗi " + r.status + " (" + path + ")");
+    return r.json();
+  }
+  var get = function (p) { return send(p, "GET"); };
+
+  // ---------- Đồng hồ server ----------
+  async function sync() {
+    offAt = Date.now();
+    try {
+      var t0 = Date.now();
+      var sv = await send("vong3/_sync", "PUT", { ".sv": "timestamp" });
+      var t1 = Date.now();
+      if (typeof sv === "number") { offset = sv - (t0 + t1) / 2; offAt = t1; }
+    } catch (e) {}
+  }
+  async function ensureClock() { if (!offAt || Date.now() - offAt > 300000) await sync(); }
+  function now() { return Date.now() + offset; }
+
+  // ---------- Tiện ích ----------
+  function esc(s) {
+    return String(s === undefined || s === null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  var nat = function (a, b) { return String(a).localeCompare(String(b), undefined, { numeric: true }); };
+  function list(o) {   // object/mảng Firebase -> [[key, value]...] (bỏ null, sắp xếp số)
+    if (!o) return [];
+    var e = Array.isArray(o) ? o.map(function (v, i) { return [String(i), v]; }) : Object.entries(o);
+    return e.filter(function (x) { return x[1] != null; }).sort(function (a, b) { return nat(a[0], b[0]); });
+  }
+  function parseUrls(str) {
+    if (!str) return [];
+    return String(str).split(/[\n;]+|,(?=\s*(?:https?:|data:))/).map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+  function mediaLabel(i, total) { return total <= 4 ? String.fromCharCode(65 + i) : String(i + 1); }
+  function parseSeconds(t) {
+    var n = parseFloat(String(t == null ? "" : t).replace(/[^0-9.,]/g, "").replace(",", "."));
+    return isNaN(n) ? Infinity : n;
+  }
+
+  // ---------- Đội / điểm (diemso) ----------
+  function teamsFrom(d) {
+    return Object.keys(d || {}).sort(nat).map(function (k, i) {
+      var v = d[k] || {};
+      return { doi: k, tendoi: v.tendoi || ("Đội " + (i + 1)), diem: parseInt(v.diem) || 0 };
+    });
+  }
+
+  // ---------- Câu hỏi ----------
+  function toUrls(v) {            // chuỗi (ngăn cách ; hoặc xuống dòng) | mảng | object -> mảng link
+    if (v == null || v === "") return [];
+    if (Array.isArray(v)) return v.map(function (x) { return String(x == null ? "" : x).trim(); }).filter(Boolean);
+    if (typeof v === "object") return Object.keys(v).sort(nat).map(function (k) { return String(v[k] == null ? "" : v[k]).trim(); }).filter(Boolean);
+    return parseUrls(v);
+  }
+  function detectLoai(loai, urls) {  // loai để trống -> tự đoán theo đuôi file
+    loai = String(loai || "").toLowerCase();
+    if (loai === "hinhanh" || loai === "video" || loai === "audio") return loai;
+    if (!urls.length) return "";
+    var u = urls[0].toLowerCase().split("?")[0];
+    if (/\.(mp4|webm|mov|m4v)$/.test(u)) return "video";
+    if (/\.(mp3|wav|ogg|m4a|aac)$/.test(u)) return "audio";
+    return "hinhanh";
+  }
+  function normQ(id, raw) {
+    var urls = toUrls(raw.url != null && raw.url !== "" ? raw.url : raw.hinhanh);
+    return {
+      id: String(id),
+      noiDung: raw.cauhoi || "",
+      dapAn: raw.dapan || "",
+      loai: detectLoai(raw.loai, urls),                      // hinhanh | video | audio | (trống = chỉ chữ)
+      urls: urls,
+      duration: Number(raw.thoigian_giay) || 30,
+      hints: list(raw.goiy).map(function (h) { return h[1]; })
+        .map(function (h) {
+          if (!h) return null;
+          var imgs = toUrls(h.image != null && h.image !== "" ? h.image : (h.hinhanh != null ? h.hinhanh : h.url));
+          return { at: Number(h.at) || 0, text: String(h.text == null ? "" : h.text).trim(), image: imgs.join(";"), images: imgs };
+        })
+        .filter(function (h) { return h && (h.text || h.images.length); })   // giữ gợi ý nếu có chữ HOẶC có ảnh
+        .sort(function (a, b) { return a.at - b.at; })
+        .map(function (h, i) { return i === 0 ? { at: 0, text: h.text, image: h.image, images: h.images } : h; })   // gợi ý đầu tiên luôn mở cùng lúc phát câu hỏi
+    };
+  }
+  async function question(id) {
+    var raw = await get("vong3/question_bank/" + encodeURIComponent(id));
+    return raw ? normQ(id, raw) : null;
+  }
+  function isRun(ms) {
+    var c = String(ms && ms.cauhoihientai != null ? ms.cauhoihientai : "");
+    return c !== "" && c !== "PREPARE";
+  }
+
+  // ---------- Dựng HTML ----------
+  function buildQuestionHtml(q) {
+    var text = esc(q.noiDung), lc = text.length > 280 ? " q-long" : "";
+    var t = '<div class="q-text' + lc + '">' + text + "</div>";
+    var u0 = q.urls[0];
+    if (q.loai === "video" && u0)
+      return '<div class="q-layout-stack">' + t + '<div class="q-media-av"><video src="' + esc(u0) + '" controls playsinline preload="metadata"></video></div></div>';
+    if (q.loai === "audio" && u0)
+      return '<div class="q-layout-stack">' + t + '<div class="q-media-av"><audio src="' + esc(u0) + '" controls preload="metadata"></audio></div></div>';
+
+    var imgs = q.loai === "hinhanh" ? q.urls : [];
+    var n = imgs.length;
+    if (n === 0) return '<div class="q-layout-text">' + t + "</div>";
+    var items = imgs.map(function (url, i) {
+      return '<figure class="media-item">' + (n >= 2 ? '<span class="media-label">' + mediaLabel(i, n) + ".</span>" : "") +
+        '<img src="' + esc(url) + '" alt="Hình ' + (i + 1) + '" onerror="this.style.opacity=0.25"></figure>';
+    }).join("");
+    if (n >= 4)
+      return '<div class="q-layout-split"><div class="q-text-col">' + t + '</div><div class="q-media">' + items + "</div></div>";
+    return '<div class="q-layout-stack">' + t + '<div class="q-media count-' + n + '">' + items + "</div></div>";
+  }
+  function buildHintsHtml(hints) {
+    return hints.map(function (h, i) {
+      return '<div class="hint-item"><div class="hint-text">💡 Gợi ý ' + (i + 1) + ": " + esc(h.text) + "</div>" +
+        (h.image && String(h.image).trim() ? '<img src="' + esc(String(h.image).trim()) + '" alt="Gợi ý ' + (i + 1) + '">' : "") + "</div>";
+    }).join("");
+  }
+  function setHtml(el, html) {
+    if (typeof el === "string") el = document.getElementById(el);
+    if (el && el._lastHtml !== html) { el.innerHTML = html; el._lastHtml = html; }
+  }
+
+  return {
+    get: get, send: send, patch: function (p, b) { return send(p, "PATCH", b); },
+    ensureClock: ensureClock, now: now,
+    esc: esc, nat: nat, list: list, parseUrls: parseUrls, mediaLabel: mediaLabel, parseSeconds: parseSeconds,
+    teamsFrom: teamsFrom, normQ: normQ, question: question, isRun: isRun,
+    buildQuestionHtml: buildQuestionHtml, buildHintsHtml: buildHintsHtml, setHtml: setHtml
+  };
+})();
+
+</script>
+
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f7; color: #333; min-height: 100vh; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
+
+        .header-panel { background: #003366; color: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-shrink: 0; }
+        .header-panel h1 { font-size: 1.8rem; letter-spacing: 1px; margin: 0; }
+        .status-bar { text-align: center; font-style: italic; color: #666; font-size: 0.95rem; flex-shrink: 0; }
+        .status-bar .st-badge { font-style: normal; font-weight: bold; padding: 2px 10px; border-radius: 12px; margin-left: 6px; color: #fff; }
+        .st-running { background: #28a745; }
+        .st-stopped { background: #6c757d; }
+
+        .team-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 5px solid #007bff; display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
+        .team-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .team-header h3 { margin: 0; color: #333; font-size: 1.5rem; overflow-wrap: anywhere; }
+        .score { font-size: 2.5rem; font-weight: bold; color: #003366; }
+
+        .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; flex-grow: 1; }
+        .answer-box { background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #dee2e6; text-align: center; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+        .answer-box.is-live { border-color: #007bff; background: #e6f7ff; box-shadow: 0 0 0 2px rgba(0,123,255,0.15); }
+        .answer-box .q-title { font-size: 0.9rem; color: #003366; font-weight: bold; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 5px; }
+        .answer-box .ans-val { font-size: 1.1rem; font-weight: bold; color: #d9534f; margin-bottom: 3px; word-break: break-word; }
+        .answer-box .ans-time { font-size: 0.85rem; color: #28a745; font-weight: bold; }
+
+        .controls { display: flex; gap: 10px; align-items: center; }
+        .controls button { flex: 1; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; color: white; transition: 0.2s; padding: 8px; }
+        .btn-add { background: #28a745; }
+        .btn-add:hover { background: #218838; transform: scale(1.05); }
+        .btn-minus { background: #dc3545; }
+        .btn-minus:hover { background: #c82333; transform: scale(1.05); }
+
+        .score-input { width: 70px; height: 42px; text-align: center; font-size: 1.2rem; font-weight: bold; border: 2px solid #ccc; border-radius: 6px; outline: none; box-sizing: border-box; color: #003366; }
+        .score-input:focus { border-color: #007bff; box-shadow: 0 0 5px rgba(0,123,255,0.5); }
+
+        .questions-panel { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        .q-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 15px; flex-shrink: 0; }
+        .q-list { display: flex; flex-direction: column; gap: 12px; padding-right: 5px; flex-grow: 1; }
+        .q-item { background: #f8f9fa; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; transition: 0.2s; }
+        .q-item.active { background: #e6f7ff; border-color: #007bff; border-left: 5px solid #007bff; }
+        .q-text { margin-bottom: 10px; overflow-wrap: anywhere; }
+        .q-content { white-space: pre-wrap; }
+        .q-actions { display: flex; gap: 8px; }
+
+        .layout-tag { display: inline-block; font-size: 0.8rem; font-weight: 600; color: #0b5394; background: #dbeafe; border-radius: 10px; padding: 2px 10px; margin: 4px 0; }
+        .q-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+        .q-thumb { display: flex; align-items: center; gap: 4px; }
+        .q-thumb b { color: #0b5394; }
+        .q-thumb img { height: 48px; max-width: 90px; object-fit: contain; border: 1px solid #adb5bd; border-radius: 4px; background: #fff; }
+
+        .hint-container { background: #fff8e1; padding: 10px; border-radius: 6px; margin: 8px 0; border: 1px solid #ffe082; }
+        .hint-item { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ffd54f; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .hint-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .hint-text { color: #d84315; font-size: 0.95rem; font-weight: 500; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .hint-img-tag { font-size: 0.8rem; color: #6c757d; }
+        .hint-note { font-size: 0.82rem; color: #8a6d00; font-weight: 600; margin-bottom: 8px; }
+        .hint-at { color: #8a6d00; font-weight: 600; }
+        .hint-state { font-size: 0.8rem; font-weight: bold; color: #adb5bd; white-space: nowrap; }
+        .hint-state.on { color: #28a745; }
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 10000; display: none; justify-content: center; align-items: center; }
+        .loading-popup { background-color: #002b5e; border: 2px solid #2898cf; border-radius: 50px; padding: 12px 35px; display: flex; align-items: center; gap: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+        .loading-spinner { width: 20px; height: 20px; border: 4px solid #3b5f85; border-top: 4px solid #ffd700; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { color: #ffd700; font-size: 1.15rem; font-weight: 800; margin: 0; font-family: Arial, sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay">
+        <div class="loading-popup">
+            <div class="loading-spinner"></div>
+            <p class="loading-text" id="loading-text">Đang thao tác dữ liệu...</p>
+        </div>
+    </div>
+
+    <div class="container-fluid py-3 px-xl-5 d-flex flex-column flex-grow-1">
+        <div class="header-panel p-3 px-4 d-flex justify-content-between align-items-center mb-2">
+            <a href="../vong2/" class="btn btn-primary fw-bold text-white text-decoration-none px-4 py-2">◀ VỀ LẠI VÒNG 2</a>
+            <h1 class="text-center m-0 flex-grow-1">BẢNG ĐIỀU KHIỂN MC - VÒNG 3</h1>
+            <div class="timer-controls d-flex gap-2">
+                <button class="btn btn-danger fw-bold" title="Dừng câu đang phát và xóa câu trả lời của các đội (giữ nguyên điểm và đội)" onclick="resetRound()">⏹ DỪNG/RESET</button>
+                <a href="../vong4/" class="btn btn-success fw-bold text-white text-decoration-none px-4 py-2">CHUYỂN VÒNG 4 ▶</a>
+            </div>
+        </div>
+
+        <div class="status-bar mb-3" id="admin-status">Đang tải dữ liệu từ Firebase...</div>
+
+        <div class="row g-4 flex-grow-1" style="margin-bottom: 10px;">
+            <div class="col-xl-7 col-lg-6"><div class="row g-3" id="team-grid"></div></div>
+            <div class="col-xl-5 col-lg-6">
+                <div class="questions-panel">
+                    <div class="q-header">
+                        <h2 style="margin: 0; color: #333; font-size:1.4rem;">Ngân hàng câu hỏi</h2>
+                        <button class="btn btn-dark fw-bold btn-sm px-3 py-2" onclick="closeQuestion()">ĐÓNG CÂU HỎI</button>
+                    </div>
+                    <div class="q-list" id="question-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Firebase: vong3/{question_bank, match_state, ketqua}, diemso/{doiX: {diem, tendoi}}
+        const esc = V3.esc;
+        let A = { ms: {}, bank: [], ketqua: {}, teams: [] };
+        let busy = false;
+
+        function showLoading(t) { document.getElementById('loading-text').innerText = t; document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+        function setStatus(html) { document.getElementById('admin-status').innerHTML = html; }
+        function fmtSec(x) { return String(Math.round(x * 10) / 10).replace(".", ","); }
+        function mediaTag(q) {
+            if (q.loai === "video") return "🎬 Video";
+            if (q.loai === "audio") return "🎵 Âm thanh";
+            if (q.loai === "hinhanh" && q.urls.length) {
+                const n = q.urls.length;
+                return n <= 3 ? `🖼 ${n} ảnh – chữ trên, ảnh dưới (không chia cột)` : `🖼 ${n} ảnh – chia 2 cột (chữ | ảnh)`;
+            }
+            return "📝 Chỉ có chữ";
+        }
+
+        // ---------- Lấy dữ liệu ----------
+        async function pollAdmin() {
+            try {
+                await V3.ensureClock();
+                const [v3, ds] = await Promise.all([V3.get("vong3"), V3.get("diemso")]);
+                const d = v3 || {};
+                A.ms = d.match_state || {};
+                A.bank = V3.list(d.question_bank).map(e => V3.normQ(e[0], e[1]));
+                A.ketqua = d.ketqua || {};
+                A.teams = V3.teamsFrom(ds || {});
+                renderStatus(); renderTeams(); renderQuestions();
+            } catch (e) {
+                setStatus(`<span style="color:red;">Lỗi: ${esc(e.message)}</span>`);
+            } finally { setTimeout(pollAdmin, 1000); }
+        }
+        const liveId = () => V3.isRun(A.ms) ? String(A.ms.cauhoihientai) : null;
+        const showAns = () => !!(A.ms.config && A.ms.config.show_dapan);
+        const refreshNow = async () => { try { await pollOnce(); } catch (e) {} };
+        async function pollOnce() {
+            const [v3, ds] = await Promise.all([V3.get("vong3"), V3.get("diemso")]);
+            const d = v3 || {};
+            A.ms = d.match_state || {}; A.bank = V3.list(d.question_bank).map(e => V3.normQ(e[0], e[1]));
+            A.ketqua = d.ketqua || {}; A.teams = V3.teamsFrom(ds || {});
+            renderStatus(); renderTeams(); renderQuestions();
+        }
+
+        // ---------- Giao diện ----------
+        function renderStatus() {
+            const id = liveId();
+            const msg = id !== null ? `Đang phát câu ${id}${showAns() ? " – đã mở đáp án" : ""}` : "Chưa phát câu hỏi";
+            setStatus(`Kết nối Firebase: OK. <span class="st-badge ${id !== null ? 'st-running' : 'st-stopped'}">${msg}</span>`);
+        }
+
+        function renderTeams() {
+            const lid = liveId();
+            let html = "";
+            A.teams.forEach((t, i) => {
+                let answers = '<div class="answers-grid">';
+                A.bank.forEach(q => {
+                    const a = A.ketqua[q.id] && A.ketqua[q.id][t.doi];
+                    answers += `
+                        <div class="answer-box ${q.id === lid ? 'is-live' : ''}">
+                            <span class="q-title">Câu ${esc(q.id)}</span>
+                            <span class="ans-val" title="${esc(a ? a.dapan : '')}">${a ? esc(a.dapan) : "..."}</span>
+                            <span class="ans-time">⏱ ${a ? esc(a.thoigian_nop) + "s" : "--"}</span>
+                        </div>`;
+                });
+                answers += '</div>';
+                html += `
+                    <div class="col-md-6">
+                        <div class="team-card p-3">
+                            <div class="team-header">
+                                <h3>${esc(t.tendoi)}</h3>
+                                <div class="score" id="score_${i}">${esc(t.diem)}</div>
+                            </div>
+                            ${answers}
+                            <div class="controls mt-auto">
+                                <button class="btn-minus" onclick="changeScore(${i}, -1)">-</button>
+                                <input type="number" id="inp_${i}" value="10" step="10" class="score-input" onclick="this.select()">
+                                <button class="btn-add" onclick="changeScore(${i}, 1)">+</button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            const grid = document.getElementById('team-grid');
+            // giữ nguyên ô nhập điểm khi vẽ lại; điểm cập nhật riêng để khỏi mất focus
+            const scoreless = html.replace(/<div class="score" id="score_\d+">[^<]*<\/div>/g, '');
+            if (grid._lastBase === scoreless) {
+                A.teams.forEach((t, i) => { const el = document.getElementById('score_' + i); if (el) el.innerText = t.diem; });
+                return;
+            }
+            const saved = {}; let focusId = null;
+            grid.querySelectorAll('.score-input').forEach(inp => { saved[inp.id] = inp.value; if (document.activeElement === inp) focusId = inp.id; });
+            grid.innerHTML = html; grid._lastBase = scoreless;
+            Object.keys(saved).forEach(id => { const el = document.getElementById(id); if (el) el.value = saved[id]; });
+            if (focusId) { const f = document.getElementById(focusId); if (f) f.focus(); }
+        }
+
+        function renderQuestions() {
+            const lid = liveId();
+            const elapsed = lid !== null ? Math.max(0, (V3.now() - (Number(A.ms.thoigian) || 0)) / 1000) : 0;
+            let html = "";
+            A.bank.forEach(q => {
+                const isActive = q.id === lid;
+
+                let hintHtml;
+                if (!q.hints.length) {
+                    hintHtml = '<span style="color:#888; font-size:0.9em; font-style:italic; display:block; margin-top:5px;">Chưa có gợi ý</span>';
+                } else {
+                    const sched = q.hints.map(h => fmtSec(h.at) + "s").join(" · ");
+                    hintHtml = '<div class="hint-container"><div class="hint-note">⏱ Gợi ý tự hiện (tính từ lúc phát câu): ' + sched + '</div>' + q.hints.map((h, k) => {
+                        const on = showAns() || elapsed >= h.at;
+                        const state = isActive ? (on ? '<span class="hint-state on">✔ đã hiện</span>' : '<span class="hint-state">chờ...</span>') : '';
+                        return `<div class="hint-item"><span class="hint-text">💡 <b>Gợi ý ${k + 1}</b> <span class="hint-at">(giây ${fmtSec(h.at)})</span>: ${h.text ? esc(h.text) : '<i>(chỉ có ảnh)</i>'} ${(h.images || []).map(u => `<img src="${esc(u)}" alt="" style="height:34px;max-width:60px;object-fit:contain;border:1px solid #adb5bd;border-radius:4px;vertical-align:middle;margin-left:4px;background:#fff;" onerror="this.style.opacity=0.25">`).join('')}</span>${state}</div>`;
+                    }).join("") + '</div>';
+                }
+
+                let mediaHtml = `<div class="layout-tag">${mediaTag(q)}</div>`;
+                if (q.loai === "hinhanh" && q.urls.length) {
+                    mediaHtml += '<div class="q-thumbs">' + q.urls.map((u, k) => `
+                        <div class="q-thumb">${q.urls.length >= 2 ? `<b>${V3.mediaLabel(k, q.urls.length)}.</b>` : ""}
+                            <img src="${esc(u)}" alt="Ảnh ${k + 1}" loading="lazy" onerror="this.style.opacity=0.25"></div>`).join("") + '</div>';
+                } else if ((q.loai === "video" || q.loai === "audio") && q.urls[0]) {
+                    mediaHtml += `<div style="font-size:0.85rem; margin:4px 0;"><a href="${esc(q.urls[0])}" target="_blank" rel="noopener">${esc(q.urls[0])}</a></div>`;
+                }
+
+                const btnAns = isActive
+                    ? (showAns()
+                        ? `<button class="btn btn-outline-success fw-bold" disabled>✔ Đã mở đáp án</button>`
+                        : `<button class="btn btn-success fw-bold" onclick="showAnswer()">Mở Đáp Án</button>`)
+                    : '';
+
+                html += `
+                    <div class="q-item ${isActive ? 'active' : ''}">
+                        <div class="q-text">
+                            <b style="color:#003366;">Câu ${esc(q.id)}:</b> <span class="q-content">${esc(q.noiDung)}</span>
+                            <span style="color:#6c757d; font-size:0.85rem;"> (${q.duration}s)</span><br>
+                            ${mediaHtml}
+                            ${hintHtml}
+                            <span style="color:#28a745; font-size:0.95em; font-weight:bold; display:block; margin-top:5px;">Đ.án gốc: ${esc(q.dapAn)}</span>
+                        </div>
+                        <div class="q-actions d-flex gap-2">
+                            <button class="btn btn-primary fw-bold flex-grow-1" onclick="setQuestion('${esc(q.id)}')">${isActive ? "Phát lại câu này" : "Phát câu này"}</button>
+                            ${btnAns}
+                        </div>
+                    </div>`;
+            });
+            if (!html) html = '<div style="color:#888; font-style:italic;">Chưa có câu hỏi trong vong3/question_bank</div>';
+            const list = document.getElementById('question-list');
+            if (list._lastHtml !== html) { list.innerHTML = html; list._lastHtml = html; }
+        }
+
+        // ---------- Điều khiển (ghi trực tiếp Firebase) ----------
+        const emptyAnswers = () => { const o = {}; A.teams.forEach(t => { o[t.doi] = { dapan: "", thoigian_nop: 0 }; }); return o; };
+        const SV = { ".sv": "timestamp" };
+
+        async function run(msg, fn) {
+            showLoading(msg);
+            try { await fn(); await refreshNow(); } catch (e) { alert(e.message); }
+            hideLoading();
+        }
+
+        function setQuestion(id) {
+            return run(`Đang phát câu hỏi ${id}...`, () => V3.patch("vong3", {
+                "match_state/cauhoihientai": String(id),
+                "match_state/thoigian": SV,                       // giờ server lúc phát
+                "match_state/config/show_dapan": false,
+                "match_state/danan_cacdoi": emptyAnswers(),
+                ["ketqua/" + id]: null                            // phát (lại) câu -> xóa bài cũ của câu này
+            }));
+        }
+        function showAnswer() {
+            return run("Đang mở đáp án...", () => V3.patch("vong3", { "match_state/config/show_dapan": true }));
+        }
+        function closeQuestion() {
+            return run("Đang đóng câu hỏi...", () => V3.patch("vong3", {
+                "match_state/cauhoihientai": "PREPARE", "match_state/config/show_dapan": false
+            }));
+        }
+        function resetRound() {
+            if (!confirm("Reset vòng 3?\n\n• Dừng câu hỏi đang phát\n• XÓA toàn bộ câu trả lời của các đội\n\nĐiểm số và danh sách đội được giữ nguyên.")) return;
+            return run("Đang reset vòng 3...", () => V3.patch("vong3", {
+                "match_state/cauhoihientai": "PREPARE", "match_state/thoigian": 0,
+                "match_state/config/show_dapan": false,
+                "match_state/danan_cacdoi": emptyAnswers(), "ketqua": null
+            }));
+        }
+
+        async function changeScore(i, mul) {
+            if (busy) return;
+            const t = A.teams[i];
+            const val = parseInt(document.getElementById('inp_' + i).value);
+            if (!t) return;
+            if (isNaN(val) || val <= 0) return alert('Vui lòng nhập số điểm hợp lệ!');
+            busy = true;
+            showLoading(`Đang cập nhật điểm cho ${t.tendoi}...`);
+            try {
+                const cur = parseInt(await V3.get("diemso/" + t.doi + "/diem")) || 0;
+                const nv = cur + val * mul;
+                await V3.patch("diemso/" + t.doi, { diem: nv });
+                t.diem = nv;
+                document.getElementById('score_' + i).innerText = nv;
+            } catch (e) { console.error(e); alert("Không thể cập nhật điểm, vui lòng kiểm tra kết nối mạng!"); }
+            hideLoading();
+            busy = false;
+        }
+
+        window.onload = pollAdmin;
+    </script>
+</body>
+</html>

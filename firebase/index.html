@@ -1,0 +1,3173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FirebaseMyAdmin - Trình Quản Lý Bảng JSON Chuẩn phpMyAdmin / MySQL</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        pma: {
+                            bg: '#f3f4f6',
+                            sidebar: '#ffffff',
+                            header: '#2c3e50',
+                            accent: '#3b82f6',
+                            sqlbg: '#e8f4f8',
+                            sqlborder: '#b6d4fe',
+                            rowodd: '#ffffff',
+                            roweven: '#f8fafc',
+                            rowhover: '#eff6ff',
+                            border: '#cbd5e1'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .pma-tab-active {
+            background-color: #ffffff;
+            border-top: 3px solid #f59e0b;
+            border-left: 1px solid #cbd5e1;
+            border-right: 1px solid #cbd5e1;
+            border-bottom: 1px solid #ffffff;
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: -1px;
+        }
+        .pma-tab-inactive {
+            background-color: #e2e8f0;
+            border: 1px solid #cbd5e1;
+            color: #475569;
+        }
+        .pma-tab-inactive:hover {
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+        .pma-table th {
+            background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
+            resize: horizontal;
+            overflow: auto;
+        }
+        .pma-row-odd { background-color: #ffffff; }
+        .pma-row-even { background-color: #f3f6fa; }
+        .pma-row-odd:hover, .pma-row-even:hover { background-color: #e0f2fe !important; }
+        .pma-row-selected { background-color: #fef3c7 !important; }
+        .pma-cell-editable:hover {
+            outline: 1px dashed #38bdf8;
+            outline-offset: -2px;
+            cursor: cell;
+        }
+    </style>
+</head>
+<body class="bg-pma-bg text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- ==================== THANH TOPBAR KIỂU PHPMYADMIN ==================== -->
+    <header class="bg-slate-900 text-white shadow-md z-20">
+        <div class="max-w-full mx-auto px-4 py-2.5 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+            <!-- Logo & Breadcrumb Database/Table -->
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <i class="fa-solid fa-database text-amber-400 text-lg"></i>
+                    <span class="font-bold tracking-tight text-base">
+                        <span class="text-sky-400">Firebase</span><span class="text-amber-400">MyAdmin</span>
+                    </span>
+                </div>
+                <div class="hidden sm:flex items-center text-xs md:text-sm text-slate-300 space-x-2">
+                    <span class="flex items-center"><i class="fa-solid fa-server mr-1.5 text-slate-400"></i>rtdb.firebaseio.com</span>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-500"></i>
+                    <span id="breadcrumb-db" class="font-medium text-sky-300">cnpt_test_rtdb</span>
+                    <i class="fa-solid fa-chevron-right text-[10px] text-slate-500"></i>
+                    <span id="breadcrumb-table" class="font-semibold text-amber-300 flex items-center">
+                        <i class="fa-solid fa-table mr-1.5"></i>vong1_chung
+                    </span>
+                </div>
+            </div>
+
+            <!-- Thanh nhập URL Endpoint, Chuyển Schema & Các nút thao tác -->
+            <div class="flex flex-wrap items-center gap-2 flex-1 xl:max-w-6xl xl:justify-end">
+                <!-- Bộ chuyển nhanh Schema -->
+                <div class="inline-flex rounded-lg border border-slate-700 bg-slate-800 p-0.5 shadow-2xs" title="Chuyển đổi chế độ ánh xạ JSON sang bảng MySQL">
+                    <button type="button" id="btn-schema-game" onclick="setMappingMode('game_schema')"
+                        class="px-2.5 py-1 rounded-md text-xs font-semibold flex items-center space-x-1.5 bg-amber-500 text-slate-950 transition cursor-pointer">
+                        <i class="fa-solid fa-table-cells"></i>
+                        <span>Chuẩn hóa phpMyAdmin</span>
+                    </button>
+                    <button type="button" id="btn-schema-raw" onclick="setMappingMode('raw_tree')"
+                        class="px-2.5 py-1 rounded-md text-xs font-medium flex items-center space-x-1.5 text-slate-300 hover:text-white transition cursor-pointer">
+                        <i class="fa-solid fa-folder-tree"></i>
+                        <span>Cây Firebase gốc</span>
+                    </button>
+                </div>
+
+                <!-- Input URL Firebase -->
+                <div class="relative flex-1 min-w-[210px]">
+                    <div class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                        <span class="text-[11px] font-mono font-semibold text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded">JSON URL</span>
+                    </div>
+                    <input type="text" id="firebase-url" 
+                        value="https://cptt-89-default-rtdb.firebaseio.com/.json"
+                        placeholder="Nhập URL Firebase (.json)..."
+                        class="w-full pl-20 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 transition">
+                </div>
+
+                <button id="btn-fetch" onclick="fetchFirebaseData(false)" 
+                    class="bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm flex items-center space-x-1.5 transition cursor-pointer"
+                    title="Tải dữ liệu mới nhất từ Firebase (GET)">
+                    <i id="fetch-icon" class="fa-solid fa-rotate"></i>
+                    <span>Kết nối & Tải lại</span>
+                </button>
+
+                <button id="btn-push-all" onclick="pushFullDatabaseToFirebase()" 
+                    class="bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm flex items-center space-x-1.5 transition cursor-pointer"
+                    title="Đẩy toàn bộ cây JSON hiện tại ghi đè lên Firebase (PUT)">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Đẩy toàn bộ (Push)</span>
+                </button>
+
+                <button onclick="openPasteJsonModal()" 
+                    class="bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm flex items-center space-x-1.5 transition cursor-pointer"
+                    title="Dán hoặc tải tệp JSON bất kỳ để chuyển sang bảng MySQL">
+                    <i class="fa-solid fa-paste"></i>
+                    <span>Nạp JSON</span>
+                </button>
+
+                <!-- Auto Refresh Toggle -->
+                <label class="flex items-center space-x-1.5 bg-slate-800 border border-slate-700 px-2.5 py-1.5 rounded-lg cursor-pointer select-none hover:bg-slate-750 transition" title="Tự động đồng bộ mỗi 5 giây">
+                    <input type="checkbox" id="auto-refresh-toggle" class="rounded text-sky-500 focus:ring-0 bg-slate-700 border-slate-600">
+                    <span class="text-xs text-slate-300 whitespace-nowrap">Auto (5s)</span>
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== MAIN CONTAINER ==================== -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+        
+        <!-- SIDEBAR BÊN TRÁI KIỂU PHPMYADMIN -->
+        <aside class="w-full md:w-72 bg-white border-b md:border-b-0 md:border-r border-slate-300 flex-shrink-0 flex flex-col">
+            <div class="p-3 bg-slate-100 border-b border-slate-300 flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center">
+                    <i class="fa-solid fa-sitemap mr-1.5 text-sky-600"></i>Cây Cơ Sở Dữ Liệu
+                </span>
+                <div class="flex items-center space-x-1">
+                    <button onclick="selectDatabaseOverview()" title="Tổng quan toàn bộ Database" class="text-slate-600 hover:text-sky-600 px-1.5 py-0.5 rounded text-xs bg-white border border-slate-300 shadow-2xs cursor-pointer">
+                        <i class="fa-solid fa-house-chimney"></i>
+                    </button>
+                    <button onclick="fetchFirebaseData(false)" title="Đồng bộ lại từ Firebase Server" class="text-slate-600 hover:text-emerald-600 px-1.5 py-0.5 rounded text-xs bg-white border border-slate-300 shadow-2xs cursor-pointer">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ô tìm kiếm nhanh tên bảng trên Sidebar -->
+            <div class="px-2.5 pt-2.5">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="sidebar-table-search" oninput="renderSidebarTree()" placeholder="Lọc nhanh tên bảng..."
+                        class="w-full pl-7 pr-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-md focus:outline-none focus:border-sky-500 focus:bg-white">
+                </div>
+            </div>
+            
+            <div class="p-2.5 overflow-y-auto flex-1 text-sm">
+                <!-- Database Root Node -->
+                <div class="mb-2">
+                    <button onclick="selectDatabaseOverview()" id="sidebar-root-btn" class="w-full flex items-center justify-between font-semibold text-slate-800 py-1.5 px-2 rounded-md bg-sky-50 border border-sky-200 hover:bg-sky-100/70 transition text-left cursor-pointer">
+                        <span class="flex items-center space-x-1.5 truncate">
+                            <i class="fa-solid fa-database text-sky-600 text-xs"></i>
+                            <span id="sidebar-db-name" class="truncate">cnpt_test_rtdb</span>
+                        </span>
+                        <span id="sidebar-total-tables" class="text-[11px] bg-slate-200 text-slate-700 px-1.5 py-0.2 rounded-full font-mono" title="Tổng số bảng">0</span>
+                    </button>
+                    
+                    <!-- Danh sách các Tables động -->
+                    <ul id="sidebar-table-list" class="mt-1.5 pl-2 space-y-1 border-l-2 border-slate-200 ml-2">
+                        <!-- Render động bằng JS -->
+                    </ul>
+                </div>
+
+                <!-- Hướng dẫn thao tác nhanh MySQL -->
+                <div class="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 text-[11px] space-y-1.5 text-slate-600">
+                    <div class="font-semibold text-slate-700 flex items-center mb-1">
+                        <i class="fa-solid fa-bolt text-amber-500 mr-1.5"></i> Đồng bộ trực tiếp Firebase
+                    </div>
+                    <p>• <strong class="text-slate-800">Nhấp đúp (Double-Click)</strong> vào ô bất kỳ để sửa trực tiếp (<kbd class="px-1 bg-white border rounded">Enter</kbd> lưu ngay lên Firebase).</p>
+                    <p>• Nhập vào <strong class="text-emerald-700">hàng xanh cuối bảng</strong> để thêm nhanh bản ghi mới.</p>
+                    <p>• Dữ liệu luôn tự động tải mới nhất từ Firebase mỗi khi F5.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- KHU VỰC NỘI DUNG CHÍNH -->
+        <main class="flex-1 flex flex-col min-w-0 bg-pma-bg overflow-y-auto">
+            
+            <!-- Thanh Navigation Tabs kiểu phpMyAdmin -->
+            <div class="bg-slate-200/80 px-4 pt-2.5 border-b border-slate-300 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center space-x-1 overflow-x-auto">
+                    <button id="tab-btn-overview" onclick="switchTab('overview')" class="pma-tab-inactive px-3.5 py-2 rounded-t-lg text-xs sm:text-sm flex items-center space-x-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-server text-indigo-600"></i>
+                        <span>Cấu trúc DB</span>
+                    </button>
+                    <button id="tab-btn-browse" onclick="switchTab('browse')" class="pma-tab-active px-3.5 py-2 rounded-t-lg text-xs sm:text-sm flex items-center space-x-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-table-list text-sky-600"></i>
+                        <span>Duyệt (Browse)</span>
+                    </button>
+                    <button id="tab-btn-structure" onclick="switchTab('structure')" class="pma-tab-inactive px-3.5 py-2 rounded-t-lg text-xs sm:text-sm flex items-center space-x-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-sitemap text-amber-600"></i>
+                        <span>Cấu trúc (Structure)</span>
+                    </button>
+                    <button id="tab-btn-insert" onclick="openInsertModal()" class="pma-tab-inactive px-3.5 py-2 rounded-t-lg text-xs sm:text-sm flex items-center space-x-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-plus-circle text-emerald-600"></i>
+                        <span>Chèn (Insert)</span>
+                    </button>
+                    <button id="tab-btn-sql" onclick="switchTab('sql')" class="pma-tab-inactive px-3.5 py-2 rounded-t-lg text-xs sm:text-sm flex items-center space-x-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-code text-purple-600"></i>
+                        <span>SQL Query / Xuất SQL</span>
+                    </button>
+                </div>
+
+                <!-- Tùy chọn làm phẳng Object (cho Raw Tree) & Nạp mẫu -->
+                <div class="pb-1.5 flex items-center space-x-2">
+                    <label id="flatten-wrapper" class="hidden flex items-center space-x-1.5 bg-white/95 border border-slate-300 px-2.5 py-1 rounded text-xs text-slate-700 font-medium cursor-pointer select-none shadow-2xs hover:bg-white">
+                        <input type="checkbox" id="flatten-toggle" checked onchange="rebuildCurrentCatalog()" class="rounded text-sky-600 focus:ring-0">
+                        <span>Làm phẳng Object (Flatten)</span>
+                    </label>
+                    <button onclick="loadFallbackSample(true)" class="text-xs text-slate-700 hover:text-slate-900 bg-white/95 hover:bg-white border border-slate-300 px-2.5 py-1 rounded shadow-2xs transition cursor-pointer" title="Nạp dữ liệu mẫu 4 vòng dự phòng">
+                        <i class="fa-solid fa-flask mr-1 text-amber-500"></i>JSON Mẫu
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vùng hiển thị thông báo & Nội dung các Tab -->
+            <div class="p-4 space-y-3">
+                
+                <!-- Banner cảnh báo khi mất mạng / lỗi quyền Firebase -->
+                <div id="fallback-banner" class="hidden bg-amber-50 border-l-4 border-amber-500 text-amber-950 px-3.5 py-2.5 rounded-r-lg shadow-2xs flex items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2.5 text-xs sm:text-sm">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-base"></i>
+                        <div>
+                            <span class="font-semibold" id="fallback-title">Thông báo đồng bộ Firebase</span>
+                            <span class="text-amber-800 ml-1" id="fallback-desc"></span>
+                        </div>
+                    </div>
+                    <button onclick="document.getElementById('fallback-banner').classList.add('hidden')" class="text-amber-600 hover:text-amber-900 p-1 cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Hộp thông báo trạng thái thực thi truy vấn (SQL Query Box kiểu phpMyAdmin) -->
+                <div class="bg-white border border-slate-300 rounded-lg shadow-2xs overflow-hidden">
+                    <div class="bg-emerald-50 border-b border-emerald-200 px-3.5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div class="flex items-center space-x-2 text-emerald-800 font-medium">
+                            <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i>
+                            <span id="query-status-text">Đang kết nối tới Firebase Realtime Database...</span>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span id="connection-status-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300">
+                                <i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Đang kết nối...
+                            </span>
+                            <span id="last-updated-time" class="text-slate-500 font-mono text-[11px]">Cập nhật: --:--:--</span>
+                        </div>
+                    </div>
+                    <div class="bg-pma-sqlbg p-2.5 flex items-center justify-between gap-2">
+                        <code id="sql-preview-bar" class="font-mono text-xs sm:text-[13px] text-slate-800 break-all">
+                            <span class="text-blue-700 font-bold">SELECT</span> * <span class="text-blue-700 font-bold">FROM</span> `vong1_chung`;
+                        </code>
+                        <button onclick="copyText(document.getElementById('sql-preview-bar').innerText)" class="text-xs bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-2.5 py-1 rounded shadow-2xs shrink-0 transition cursor-pointer" title="Sao chép câu lệnh SQL">
+                            <i class="fa-regular fa-copy mr-1"></i>Copy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 0: DATABASE OVERVIEW (CẤU TRÚC DB) ==================== -->
+                <div id="view-overview" class="hidden space-y-3">
+                    <div class="bg-white border border-slate-300 rounded-lg shadow-xs overflow-hidden">
+                        <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="font-semibold text-sm text-slate-800 flex items-center">
+                                <i class="fa-solid fa-database text-sky-600 mr-2"></i>
+                                Danh sách các Bảng (Tables) trong Cơ sở dữ liệu
+                            </h3>
+                            <button onclick="exportFullDatabaseSql()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-2xs flex items-center space-x-1.5 transition cursor-pointer">
+                                <i class="fa-solid fa-file-export"></i>
+                                <span>Xuất toàn bộ Database (.SQL)</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm pma-table">
+                                <thead>
+                                    <tr class="border-b-2 border-slate-300 text-slate-700">
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Bảng (Table)</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Thao tác</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Loại ánh xạ</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300 text-right">Hàng (Rows)</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Các cột (Columns)</th>
+                                        <th class="py-2.5 px-3 text-right">Kích thước</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="overview-tables-body" class="divide-y divide-slate-200 font-mono text-xs">
+                                    <!-- Render động bằng JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 1: BROWSE (GIAO DIỆN PHPMYADMIN CHUẨN) ==================== -->
+                <div id="view-browse" class="space-y-3">
+                    <!-- Thanh điều khiển bảng chuẩn phpMyAdmin -->
+                    <div class="bg-slate-100 p-2.5 rounded-lg border border-slate-300 shadow-2xs flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <!-- Checkbox Hiện tất -->
+                            <label class="flex items-center space-x-1.5 font-medium text-slate-700 cursor-pointer select-none">
+                                <input type="checkbox" id="show-all-rows" checked onchange="renderTable()" class="rounded text-sky-600 focus:ring-0">
+                                <span>Hiện tất</span>
+                            </label>
+
+                            <span class="text-slate-300">|</span>
+
+                            <!-- Số hàng -->
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-slate-700 font-medium">Số hàng:</span>
+                                <select id="rows-limit-select" onchange="onRowsLimitChange()" class="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-sky-500">
+                                    <option value="25" selected>25</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                    <option value="ALL">Tất cả</option>
+                                </select>
+                            </div>
+
+                            <!-- Tìm kiếm trong bảng này -->
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-slate-700 font-medium">Tìm kiếm trong bảng này:</span>
+                                <div class="relative">
+                                    <input type="text" id="table-search" oninput="renderTable()" placeholder="Nhập từ khóa..."
+                                        class="bg-white border border-slate-300 rounded px-2.5 py-1 text-xs w-44 sm:w-56 focus:outline-none focus:border-sky-500">
+                                    <button onclick="document.getElementById('table-search').value=''; renderTable();" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-[10px] cursor-pointer">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Sort by key -->
+                            <div class="flex items-center space-x-1.5">
+                                <span class="text-slate-700 font-medium">Sort by key:</span>
+                                <select id="sort-by-key-select" onchange="onSortKeySelectChange()" class="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono text-slate-800 focus:outline-none focus:border-sky-500">
+                                    <option value="NONE">Không</option>
+                                </select>
+                            </div>
+
+                            <!-- Bộ lọc theo Gói / Mức điểm -->
+                            <div id="group-filter-wrapper" class="hidden flex items-center space-x-1.5 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded">
+                                <i class="fa-solid fa-filter text-amber-600"></i>
+                                <span class="font-semibold text-amber-900">Lọc gói:</span>
+                                <select id="group-filter-select" onchange="renderTable()" class="bg-transparent font-mono font-bold text-amber-950 focus:outline-none cursor-pointer">
+                                    <option value="ALL">Tất cả</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Các nút chức năng phụ bên phải -->
+                        <div class="flex items-center space-x-2">
+                            <!-- Chuyển chế độ Gom nhóm / Bảng phẳng khi ở Raw Tree -->
+                            <div id="raw-grouped-switcher" class="hidden inline-flex rounded border border-purple-300 bg-purple-50 p-0.5">
+                                <button type="button" id="btn-raw-grouped" onclick="setRawLayoutMode('grouped')" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-600 text-white cursor-pointer">Gom nhóm (Grouped)</button>
+                                <button type="button" id="btn-raw-flat" onclick="setRawLayoutMode('flat')" class="px-2 py-0.5 rounded text-[11px] font-medium text-purple-900 cursor-pointer">Bảng phẳng (Flat)</button>
+                            </div>
+
+                            <button onclick="openInsertModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded shadow-2xs flex items-center space-x-1 transition cursor-pointer">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Chèn dòng (Form)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG DỮ LIỆU CHÍNH KIỂU PHPMYADMIN -->
+                    <div id="flat-table-container" class="bg-white border border-slate-300 rounded-lg shadow-xs overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs sm:text-[13px] pma-table">
+                                <thead>
+                                    <tr id="table-head-row" class="border-b-2 border-slate-300 text-sky-900 select-none">
+                                        <!-- Render động bằng JS -->
+                                    </tr>
+                                </thead>
+                                <tbody id="table-body" class="divide-y divide-slate-200 font-mono">
+                                    <!-- Render động bằng JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Thanh thao tác hàng loạt dưới chân bảng kiểu phpMyAdmin -->
+                        <div class="bg-slate-100 border-t border-slate-300 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div class="flex flex-wrap items-center space-x-3">
+                                <span class="text-slate-500 font-mono">↳</span>
+                                <label class="flex items-center space-x-1.5 font-medium text-slate-700 cursor-pointer select-none">
+                                    <input type="checkbox" id="check-all-bottom" onchange="toggleSelectAllRows(this.checked)" class="rounded text-sky-600 focus:ring-0">
+                                    <span>Chọn tất cả (<span id="selected-rows-count">0</span> đang chọn)</span>
+                                </label>
+                                <button type="button" onclick="toggleSelectAllRows(false)" class="text-slate-600 hover:text-slate-900 underline cursor-pointer">
+                                    Bỏ chọn
+                                </button>
+                                <span class="text-slate-400 italic">Với mục đã chọn:</span>
+                                <button type="button" onclick="bulkEditSelected()" class="inline-flex items-center space-x-1 text-sky-700 hover:text-sky-900 font-medium cursor-pointer">
+                                    <i class="fa-solid fa-pen text-amber-500"></i>
+                                    <span>Sửa</span>
+                                </button>
+                                <button type="button" onclick="bulkDuplicateSelected()" class="inline-flex items-center space-x-1 text-sky-700 hover:text-sky-900 font-medium cursor-pointer">
+                                    <i class="fa-solid fa-clone text-indigo-500"></i>
+                                    <span>Chép</span>
+                                </button>
+                                <button type="button" onclick="bulkDeleteSelected()" class="inline-flex items-center space-x-1 text-red-600 hover:text-red-800 font-medium cursor-pointer">
+                                    <i class="fa-solid fa-circle-xmark text-red-500"></i>
+                                    <span>Xóa bỏ</span>
+                                </button>
+                                <button type="button" onclick="bulkExportSelected()" class="inline-flex items-center space-x-1 text-emerald-700 hover:text-emerald-900 font-medium cursor-pointer">
+                                    <i class="fa-solid fa-file-export text-emerald-600"></i>
+                                    <span>Xuất SQL</span>
+                                </button>
+                            </div>
+
+                            <div class="text-[11px] text-slate-500">
+                                <i class="fa-solid fa-computer-mouse mr-1 text-sky-600"></i>Mẹo: <strong>Nhấp đúp (Double-click)</strong> vào ô bất kỳ để sửa & lưu ngay lên Firebase
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CHẾ ĐỘ HIỂN THỊ GOM NHÓM THEO GÓI (DÀNH CHO RAW TREE GROUPED) -->
+                    <div id="grouped-tables-container" class="hidden space-y-4">
+                        <!-- Render động từng khối gói (Gói 1 — goi1, Gói 2 — goi2...) -->
+                    </div>
+
+                    <!-- Trạng thái rỗng -->
+                    <div id="empty-state" class="hidden bg-white border border-slate-300 rounded-lg py-10 px-4 text-center text-slate-500">
+                        <i class="fa-regular fa-folder-open text-3xl text-slate-300 mb-2"></i>
+                        <p class="text-sm font-medium text-slate-600">Không tìm thấy bản ghi nào phù hợp với từ khóa lọc.</p>
+                        <button onclick="document.getElementById('table-search').value=''; if(document.getElementById('group-filter-select')) document.getElementById('group-filter-select').value='ALL'; renderTable();" class="mt-2 text-xs text-sky-600 hover:underline cursor-pointer">
+                            Đặt lại bộ lọc
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 2: STRUCTURE (CẤU TRÚC CỘT) ==================== -->
+                <div id="view-structure" class="hidden space-y-3">
+                    <div class="bg-white border border-slate-300 rounded-lg shadow-xs overflow-hidden">
+                        <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex flex-wrap items-center justify-between gap-2">
+                            <h3 class="font-semibold text-sm text-slate-800 flex items-center">
+                                <i class="fa-solid fa-table-columns text-amber-500 mr-2"></i>
+                                Cấu trúc cột bảng MySQL: <span id="structure-table-title" class="ml-1.5 font-mono text-sky-700"></span>
+                            </h3>
+                            <span id="structure-schema-badge" class="text-xs bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded font-mono">InnoDB / utf8mb4</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm pma-table">
+                                <thead>
+                                    <tr class="border-b border-slate-300 text-slate-700">
+                                        <th class="py-2.5 px-3 border-r border-slate-300 w-10 text-center">#</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Tên cột (Column)</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Kiểu dữ liệu (Type)</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Đối chiếu (Collation)</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Null</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Chỉ mục (Key)</th>
+                                        <th class="py-2.5 px-3 border-r border-slate-300">Mặc định (Default)</th>
+                                        <th class="py-2.5 px-3">Ghi chú ánh xạ JSON</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="structure-table-body" class="divide-y divide-slate-200 font-mono text-xs">
+                                    <!-- Render động bằng JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== TAB 3: SQL & JSON EXPORT ==================== -->
+                <div id="view-sql" class="hidden space-y-3">
+                    <div class="bg-white p-3 rounded-lg border border-slate-300 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center space-x-2 text-xs sm:text-sm">
+                            <span class="font-semibold text-slate-700">Phạm vi xuất dữ liệu:</span>
+                            <button id="export-scope-table" onclick="setExportScope('table')" class="px-3 py-1 rounded bg-sky-600 text-white font-medium text-xs cursor-pointer">
+                                Chỉ bảng hiện tại (<span id="export-current-table-name">...</span>)
+                            </button>
+                            <button id="export-scope-db" onclick="setExportScope('database')" class="px-3 py-1 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 font-medium text-xs cursor-pointer">
+                                Toàn bộ Database (Tất cả bảng)
+                            </button>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="downloadSqlFile()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-2xs flex items-center space-x-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-code"></i>
+                                <span>Xuất SQL (.sql)</span>
+                            </button>
+                            <button onclick="downloadJsonFile()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-2xs flex items-center space-x-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-arrow-down"></i>
+                                <span>Xuất JSON (.json)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <!-- Cột trái: Mã lệnh SQL CREATE TABLE & INSERT INTO -->
+                        <div class="bg-white border border-slate-300 rounded-lg shadow-xs flex flex-col overflow-hidden">
+                            <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between">
+                                <span class="font-semibold text-xs sm:text-sm text-slate-800 flex items-center">
+                                    <i class="fa-solid fa-file-code text-blue-600 mr-2"></i>Mã xuất MySQL (CREATE TABLE & INSERT INTO)
+                                </span>
+                                <button onclick="copyText(document.getElementById('sql-export-box').value)" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded transition cursor-pointer">
+                                    <i class="fa-regular fa-copy mr-1"></i>Sao chép SQL
+                                </button>
+                            </div>
+                            <textarea id="sql-export-box" readonly rows="18" 
+                                class="w-full p-3.5 font-mono text-xs bg-slate-900 text-emerald-400 focus:outline-none resize-y leading-relaxed"></textarea>
+                        </div>
+
+                        <!-- Cột phải: Dữ liệu JSON đã đồng bộ ngược lại cấu trúc Firebase -->
+                        <div class="bg-white border border-slate-300 rounded-lg shadow-xs flex flex-col overflow-hidden">
+                            <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-300 flex items-center justify-between">
+                                <span class="font-semibold text-xs sm:text-sm text-slate-800 flex items-center">
+                                    <i class="fa-solid fa-brackets-curly text-amber-600 mr-2"></i>Dữ liệu JSON Firebase (Đồng bộ 2 chiều)
+                                </span>
+                                <button onclick="copyText(document.getElementById('json-export-box').value)" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-1 rounded transition cursor-pointer">
+                                    <i class="fa-regular fa-copy mr-1"></i>Sao chép JSON
+                                </button>
+                            </div>
+                            <textarea id="json-export-box" readonly rows="18" 
+                                class="w-full p-3.5 font-mono text-xs bg-slate-900 text-sky-300 focus:outline-none resize-y leading-relaxed"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== MODAL CHÈN / CHỈNH SỬA BẢN GHI (INSERT / EDIT) ==================== -->
+    <div id="row-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl border border-slate-300 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="bg-slate-800 text-white px-4 py-3 flex items-center justify-between shrink-0">
+                <h3 id="modal-title" class="font-semibold text-sm sm:text-base flex items-center">
+                    <i class="fa-solid fa-pen-to-square text-amber-400 mr-2"></i>
+                    <span>Chỉnh sửa bản ghi</span>
+                </h3>
+                <button onclick="closeRowModal()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <form id="row-form" onsubmit="handleSaveRowModal(event)" class="p-4 space-y-3 overflow-y-auto flex-1">
+                <input type="hidden" id="modal-mode" value="insert">
+                <input type="hidden" id="modal-row-uid" value="">
+
+                <div id="dynamic-form-fields" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Các cột của bảng được render động tại đây -->
+                </div>
+
+                <!-- Tùy chọn thêm cột mới ngay trong modal -->
+                <div class="pt-2 border-t border-slate-200">
+                    <button type="button" onclick="addCustomColumnInModal()" class="text-xs text-sky-600 hover:text-sky-800 font-medium flex items-center cursor-pointer">
+                        <i class="fa-solid fa-plus-circle mr-1"></i> Thêm cột thuộc tính mới
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200 shrink-0">
+                    <button type="button" onclick="closeRowModal()" class="px-4 py-2 text-xs sm:text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition cursor-pointer">
+                        Hủy bỏ
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-xs sm:text-sm font-medium text-white bg-sky-600 hover:bg-sky-500 rounded-lg shadow-sm flex items-center space-x-1.5 transition cursor-pointer">
+                        <i class="fa-solid fa-check text-xs"></i>
+                        <span>Thực thi & Lưu lên Firebase</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL NẠP JSON THỦ CÔNG / UPLOAD FILE JSON ==================== -->
+    <div id="paste-json-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl border border-slate-300 shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="bg-slate-800 text-white px-4 py-3 flex items-center justify-between shrink-0">
+                <h3 class="font-semibold text-sm sm:text-base flex items-center">
+                    <i class="fa-solid fa-paste text-amber-400 mr-2"></i>
+                    <span>Nạp JSON để chuyển thành Bảng MySQL</span>
+                </h3>
+                <button onclick="closePasteJsonModal()" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-3 overflow-y-auto flex-1">
+                <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
+                    <span>Dán chuỗi JSON hoặc chọn tệp <code>.json</code> từ máy tính:</span>
+                    <div class="flex items-center space-x-2">
+                        <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-2.5 py-1 rounded font-medium cursor-pointer">
+                            <i class="fa-solid fa-upload mr-1 text-sky-600"></i>Chọn file .JSON
+                            <input type="file" accept=".json,application/json" onchange="handleJsonFileUpload(event)" class="hidden">
+                        </label>
+                        <input type="text" id="paste-json-table-name" value="custom_table" placeholder="Tên bảng nếu dán 1 node..."
+                            class="px-2.5 py-1 border border-slate-300 rounded font-mono text-xs bg-slate-50 w-36">
+                    </div>
+                </div>
+                <textarea id="paste-json-textarea" rows="13" placeholder='Dán dữ liệu JSON tại đây...'
+                    class="w-full p-3 font-mono text-xs bg-slate-900 text-sky-300 border border-slate-700 rounded-lg focus:outline-none focus:border-sky-400 leading-relaxed"></textarea>
+                <div class="flex items-center justify-between pt-2">
+                    <button type="button" onclick="document.getElementById('paste-json-textarea').value = JSON.stringify(FALLBACK_GAME_JSON, null, 2)" class="text-xs text-sky-700 hover:underline font-medium cursor-pointer">
+                        Điền sẵn JSON 4 vòng mẫu
+                    </button>
+                    <div class="flex items-center space-x-2">
+                        <button type="button" onclick="closePasteJsonModal()" class="px-4 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">
+                            Đóng
+                        </button>
+                        <button type="button" onclick="applyPastedJson()" class="px-4 py-2 text-xs font-medium text-white bg-amber-600 hover:bg-amber-500 rounded-lg shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Chuyển sang Bảng MySQL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL XEM CHI TIẾT Ô JSON DÀI ==================== -->
+    <div id="json-inspector-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl border border-slate-300 shadow-2xl w-full max-w-lg overflow-hidden">
+            <div class="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between">
+                <h3 id="inspector-title" class="font-semibold text-xs sm:text-sm font-mono text-amber-300">Chi tiết giá trị</h3>
+                <button onclick="document.getElementById('json-inspector-modal').classList.add('hidden')" class="text-slate-400 hover:text-white p-1 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-3">
+                <pre id="inspector-content" class="bg-slate-900 text-emerald-300 p-3 rounded-lg font-mono text-xs overflow-x-auto max-h-80 leading-relaxed"></pre>
+                <div class="flex justify-end space-x-2">
+                    <button onclick="copyText(document.getElementById('inspector-content').textContent)" class="px-3 py-1.5 text-xs bg-sky-600 hover:bg-sky-500 text-white rounded-lg cursor-pointer">
+                        <i class="fa-regular fa-copy mr-1"></i>Sao chép
+                    </button>
+                    <button onclick="document.getElementById('json-inspector-modal').classList.add('hidden')" class="px-3 py-1.5 text-xs bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg cursor-pointer">
+                        Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        // =========================================================================
+        // 1. DỮ LIỆU DỰ PHÒNG (FALLBACK ONLY - CHỈ DÙNG KHI MẤT KẾT NỐI MẠNG)
+        // =========================================================================
+        const LOCAL_BACKUP_KEY = 'firebasemyadmin_rtdb_backup_v2';
+
+        const FALLBACK_GAME_JSON = {
+            "diemso": {
+                "doi1": { "diem": 0, "tendoi": "Đội 1" },
+                "doi2": { "diem": 0, "tendoi": "Đội 2" },
+                "doi3": { "diem": 0, "tendoi": "Đội 3" },
+                "doi4": { "diem": 0, "tendoi": "Đội 4" }
+            },
+            "vong1_chung": {
+                "_sync": 1795100777535,
+                "match_state": {
+                    "cauhoihientai": "",
+                    "config": { "ketvong": false, "show": false },
+                    "doihientai": "",
+                    "goihientai": "",
+                    "thoigian": 0
+                },
+                "question_bank": {
+                    "goi1": [
+                        null,
+                        { "cauhoi": "Ai là tác giả của “Hịch tướng sĩ”?", "dapan": "Trần Hưng Đạo" },
+                        { "cauhoi": "Kim cương và than là hai dạng thù hình của nguyên tố nào?", "dapan": "Carbon (C)" },
+                        { "cauhoi": "Ta dùng thiết bị gì để đo giá trị của cường độ dòng điện chạy qua một đoạn mạch?", "dapan": "Ampe kế" },
+                        { "cauhoi": "Tính cos90 độ", "dapan": "cos90 độ = 0" },
+                        { "cauhoi": "“Bao giờ người Tây nhổ hết cỏ nước Nam thì mới hết người Nam đánh Tây” là câu nói nổi tiếng của ai?", "dapan": "Nguyễn Trung Trực" },
+                        { "cauhoi": "On New year’s day, children often get this present from their parents and other people. What is the present?", "dapan": "Lucky money." }
+                    ],
+                    "goi2": [
+                        null,
+                        { "cauhoi": "Trong tác phẩm Lão Hạc, Lão Hạc nuôi con gì?", "dapan": "Con chó" },
+                        { "cauhoi": "Ở điều kiện thường, kim loại nào tồn tại ở trạng thái lỏng?", "dapan": "Thủy ngân (Hg)" },
+                        { "cauhoi": "Bàn ủi (bàn là) hoạt động dựa trên tác dụng gì của dòng điện?", "dapan": "Tác dụng nhiệt" },
+                        { "cauhoi": "Hình hộp chữ nhật có bao nhiêu mặt?", "dapan": "6 mặt" },
+                        { "cauhoi": "Thực dân Pháp đã nổ súng ở đâu mở đầu quá trình xâm lược nước ta?", "dapan": "Bán đảo Sơn Trà (Đà Nẵng)" },
+                        { "cauhoi": "This is the device which can transmit speech over a long distance. What is it?", "dapan": "Telephone" }
+                    ],
+                    "goi3": [
+                        null,
+                        { "cauhoi": "Thủ đô của Việt Nam là gì?", "dapan": "Hà Nội" },
+                        { "cauhoi": "Nguyên tố hóa học nào có ký hiệu là O?", "dapan": "Oxi" },
+                        { "cauhoi": "What color is the sky on a clear day?", "dapan": "Blue" },
+                        { "cauhoi": "1 + 1 = ?", "dapan": "2" },
+                        { "cauhoi": "Ai là người phát minh ra bóng đèn điện?", "dapan": "Thomas Edison" },
+                        { "cauhoi": "Hành tinh nào gần Mặt Trời nhất?", "dapan": "Sao Thủy" }
+                    ],
+                    "goi4": [
+                        null,
+                        { "cauhoi": "Việt Nam có bao nhiêu tỉnh/thành phố (2024)?", "dapan": "63" },
+                        { "cauhoi": "Công thức hóa học của nước là gì?", "dapan": "H2O" },
+                        { "cauhoi": "Đơn vị đo điện áp là gì?", "dapan": "Vôn (V)" },
+                        { "cauhoi": "Tác giả của “Truyện Kiều” là ai?", "dapan": "Nguyễn Du" },
+                        { "cauhoi": "Con vật nào được gọi là chúa sơn lâm?", "dapan": "Con hổ" },
+                        { "cauhoi": "How many days are there in a week?", "dapan": "7" }
+                    ]
+                }
+            },
+            "vong1_rieng": {
+                "_sync": 1795094256292,
+                "match_state": {
+                    "cauhoihientai": "1",
+                    "config": { "ketvong": false, "show": false },
+                    "doihientai": "Đội 1",
+                    "goidadung": ["goi3"],
+                    "goihientai": "goi3",
+                    "thoigian": 1795094324131
+                },
+                "question_bank": {
+                    "goi1": [
+                        null,
+                        { "cauhoi": "Số nguyên tố nhỏ nhất là số nào?", "dapan": "2", "linhvuc": "Toán" },
+                        { "cauhoi": "Thủ đô của Nhật Bản là gì?", "dapan": "Tokyo", "linhvuc": "Địa lý" },
+                        { "cauhoi": "Chiến thắng Điện Biên Phủ diễn ra năm nào?", "dapan": "1954", "linhvuc": "Lịch sử" },
+                        { "cauhoi": "Ký hiệu hóa học của vàng là gì?", "dapan": "Au", "linhvuc": "Hóa học" },
+                        { "cauhoi": "Tác giả Truyện Kiều là ai?", "dapan": "Nguyễn Du", "linhvuc": "Văn học" },
+                        { "cauhoi": "Đơn vị đo lực trong hệ SI là gì?", "dapan": "Niutơn", "linhvuc": "Vật lí" }
+                    ],
+                    "goi2": [
+                        null,
+                        { "cauhoi": "Căn bậc hai của 81 là bao nhiêu?", "dapan": "9", "linhvuc": "Toán" },
+                        { "cauhoi": "Sông dài nhất Việt Nam là sông nào?", "dapan": "Sông Mê Kông", "linhvuc": "Địa lý" },
+                        { "cauhoi": "Vị vua đầu tiên của nhà Nguyễn là ai?", "dapan": "Gia Long", "linhvuc": "Lịch sử" },
+                        { "cauhoi": "Công thức hóa học của nước là gì?", "dapan": "H2O", "linhvuc": "Hóa học" },
+                        { "cauhoi": "Cơ quan bơm máu trong cơ thể người là gì?", "dapan": "Tim", "linhvuc": "Sinh học" },
+                        { "cauhoi": "Hành tinh gần Mặt Trời nhất là gì?", "dapan": "Sao Thủy", "linhvuc": "Thiên văn" }
+                    ],
+                    "goi3": [
+                        null,
+                        { "cauhoi": "Tổng ba góc trong một tam giác bằng bao nhiêu độ?", "dapan": "180", "linhvuc": "Toán" },
+                        { "cauhoi": "Đỉnh núi cao nhất Việt Nam là gì?", "dapan": "Fansipan", "linhvuc": "Địa lý" },
+                        { "cauhoi": "Ngày Quốc khánh nước ta là ngày nào?", "dapan": "2/9", "linhvuc": "Lịch sử" },
+                        { "cauhoi": "Khí nào chiếm nhiều nhất trong không khí?", "dapan": "Nitơ", "linhvuc": "Hóa học" },
+                        { "cauhoi": "Bài thơ Tây Tiến là của tác giả nào?", "dapan": "Quang Dũng", "linhvuc": "Văn học" },
+                        { "cauhoi": "Ánh sáng truyền nhanh nhất trong môi trường nào?", "dapan": "Chân không", "linhvuc": "Vật lí" }
+                    ],
+                    "goi4": [
+                        null,
+                        { "cauhoi": "Số Pi xấp xỉ bằng bao nhiêu (2 chữ số thập phân)?", "dapan": "3,14", "linhvuc": "Toán" },
+                        { "cauhoi": "Châu lục nào lớn nhất thế giới?", "dapan": "Châu Á", "linhvuc": "Địa lý" },
+                        { "cauhoi": "Chiến thắng Bạch Đằng năm 938 do ai lãnh đạo?", "dapan": "Ngô Quyền", "linhvuc": "Lịch sử" },
+                        { "cauhoi": "Nguyên tố có ký hiệu Na là gì?", "dapan": "Natri", "linhvuc": "Hóa học" },
+                        { "cauhoi": "Quá trình cây xanh tạo chất hữu cơ nhờ ánh sáng gọi là gì?", "dapan": "Quang hợp", "linhvuc": "Sinh học" },
+                        { "cauhoi": "Một đội bóng đá thi đấu trên sân có bao nhiêu cầu thủ?", "dapan": "11", "linhvuc": "Thể thao" }
+                    ]
+                },
+                "vong1_rieng": {
+                    "match_state": {
+                        "cauhoihientai": "PREPARE",
+                        "config": { "ketvong": false, "show": false },
+                        "doihientai": "Đội 1",
+                        "thoigian": 0
+                    },
+                    "question_bank": {
+                        "goi1": [
+                            null,
+                            { "cauhoi": "Ai là tác giả của \"Hịch tướng sĩ\"?", "dapan": "Trần Hưng Đạo" },
+                            { "cauhoi": "Kim cương và than là hai dạng thù hình của nguyên tố hóa học nào?", "dapan": "Carbon (C)" },
+                            { "cauhoi": "Ta dùng thiết bị gì để đo giá trị của cường độ dòng điện?", "dapan": "Ampe kế" },
+                            { "cauhoi": "Tính cos90 độ", "dapan": "cos90 độ = 0" },
+                            { "cauhoi": "\"Bao giờ người Tây nhổ hết cỏ nước Nam thì mới hết người Nam đánh Tây\" là câu nói của ai?", "dapan": "Nguyễn Trung Trực" },
+                            { "cauhoi": "On New year's day, children often get this present...", "dapan": "Lucky money" }
+                        ],
+                        "goi2": [
+                            null,
+                            { "cauhoi": "Trong tác phẩm Lão Hạc, Lão Hạc nuôi con gì?", "dapan": "Con chó" },
+                            { "cauhoi": "Ở điều kiện thường, kim loại nào tồn tại ở trạng thái lỏng?", "dapan": "Thủy ngân (Hg)" },
+                            { "cauhoi": "Bàn ủi (bàn là) hoạt động dựa trên tác dụng gì của dòng điện?", "dapan": "Tác dụng nhiệt" },
+                            { "cauhoi": "Hình hộp chữ nhật có bao nhiêu mặt?", "dapan": "6 mặt" },
+                            { "cauhoi": "Thực dân Pháp đã nổ súng ở đâu mở đầu quá trình xâm lược Việt Nam?", "dapan": "Bán đảo Sơn Trà (Đà Nẵng)" },
+                            { "cauhoi": "This is the device which can transmit speech over distances...", "dapan": "Telephone" }
+                        ],
+                        "goi3": [
+                            null,
+                            { "cauhoi": "Thủ đô của Việt Nam là gì?", "dapan": "Hà Nội" },
+                            { "cauhoi": "Nguyên tố hóa học nào có ký hiệu là O?", "dapan": "Oxi" },
+                            { "cauhoi": "What color is the sky on a clear day?", "dapan": "Blue" },
+                            { "cauhoi": "1 + 1 = ?", "dapan": "2" },
+                            { "cauhoi": "Ai là người phát minh ra bóng đèn điện?", "dapan": "Thomas Edison" },
+                            { "cauhoi": "Hành tinh nào gần Mặt Trời nhất?", "dapan": "Sao Thủy" }
+                        ],
+                        "goi4": [
+                            null,
+                            { "cauhoi": "Việt Nam có bao nhiêu tỉnh/thành phố (2024)?", "dapan": "63" },
+                            { "cauhoi": "Công thức hóa học của nước là gì?", "dapan": "H2O" },
+                            { "cauhoi": "Đơn vị đo điện áp là gì?", "dapan": "Vôn (V)" },
+                            { "cauhoi": "Tác giả của \"Truyện Kiều\" là ai?", "dapan": "Nguyễn Du" },
+                            { "cauhoi": "Con vật nào được gọi là chúa sơn lâm?", "dapan": "Con hổ" },
+                            { "cauhoi": "How many days are there in a week?", "dapan": "7" }
+                        ]
+                    }
+                }
+            },
+            "vong2": {
+                "match_state": {
+                    "cauhoihientai": "PREPARE",
+                    "chuong_cnv": { "is_locked": false, "team_bam": "" },
+                    "thoigian": 0,
+                    "trangthai_hangngang": [null, "CHUA_MO", "DA_MO", "CHUA_MO", "CHUA_MO"],
+                    "trangthai_hinhanh": "CHUA_MO"
+                },
+                "question_bank": {
+                    "hangngang": [
+                        null,
+                        { "cauhoi": "Câu hỏi hàng ngang 1?", "dapan": "DAPAN1", "sokytu": 6 },
+                        { "cauhoi": "Câu hỏi hàng ngang 2?", "dapan": "DAPAN2", "sokytu": 6 },
+                        { "cauhoi": "Câu hỏi hàng ngang 3?", "dapan": "DAPAN3", "sokytu": 6 },
+                        { "cauhoi": "Câu hỏi hàng ngang 4?", "dapan": "DAPAN4", "sokytu": 6 }
+                    ],
+                    "so_kytu": 12,
+                    "tukhoa": "ĐIỆN BIÊN PHỦ"
+                },
+                "trangThai": {
+                    "blurredPieces": "",
+                    "cauHoiHienTai": "5",
+                    "manh1": true,
+                    "manh2": true,
+                    "manh3": true,
+                    "manh4": true,
+                    "manh5": true,
+                    "showAnswer": false,
+                    "timerEndTime": 1795080845887,
+                    "timerPaused": false,
+                    "timerRemaining": 30000
+                }
+            },
+            "vong3": {
+                "_sync": 1795103777284,
+                "match_state": {
+                    "cauhoihientai": "1",
+                    "config": { "show_dapan": false },
+                    "danan_cacdoi": {
+                        "doi1": { "dapan": "", "thoigian_nop": 0 },
+                        "doi2": { "dapan": "", "thoigian_nop": 0 },
+                        "doi3": { "dapan": "", "thoigian_nop": 0 },
+                        "doi4": { "dapan": "", "thoigian_nop": 0 }
+                    },
+                    "thoigian": 1795093975095
+                },
+                "question_bank": [
+                    null,
+                    {
+                        "cauhoi": "Đây là gì?",
+                        "dapan": "Bánh Trưng",
+                        "goiy": [
+                            { "at": 10, "image": "", "text": "Được làm từ nếp." },
+                            { "at": 18, "image": "", "text": "Tượng trưng cho đất." },
+                            { "at": 24, "image": "", "text": "Thịt mỡ, đậu xanh là phần nhân." }
+                        ],
+                        "loai": "",
+                        "thoigian_giay": 30,
+                        "url": ""
+                    },
+                    {
+                        "cauhoi": "Ông là ai?",
+                        "dapan": "Lê Hồng Phong",
+                        "goiy": [
+                            { "at": 15, "image": "", "text": "Ông tên thật là Lê Huy Doãn, sinh năm 1902, quê ở Nghệ An." }
+                        ],
+                        "loai": "",
+                        "thoigian_giay": 30,
+                        "url": ""
+                    },
+                    {
+                        "cauhoi": "Đây là đất nước nào?",
+                        "dapan": "Nhật Bản",
+                        "loai": "",
+                        "thoigian_giay": 30,
+                        "url": ""
+                    },
+                    {
+                        "cauhoi": "Đây là nguyên tố hóa học nào?",
+                        "dapan": "Sắt (Fe)",
+                        "goiy": [
+                            { "at": 10, "image": "", "text": "Là kim loại, dẻo, dễ dát mỏng." },
+                            { "at": 20, "image": "", "text": "Là thành phần chính của thép." }
+                        ],
+                        "loai": "",
+                        "thoigian_giay": 30,
+                        "url": ""
+                    }
+                ]
+            },
+            "vong4": {
+                "_sync": 1795099974111,
+                "match_state": {
+                    "cauhoihientai": "",
+                    "config": { "show_dapan": false },
+                    "doihientai": "",
+                    "goi_da_chon": "",
+                    "ngoisao": false,
+                    "thoigian": 0,
+                    "trangthai": "Cho"
+                },
+                "question_bank": {
+                    "20_1": { "cauhoi": "A rectangular water tank has a length of 2 m, a width of 1.5 m, and a height of 1 m. Calculate the maximum volume of water the tank can hold (in liters).", "dapan": "3000 liters", "mucdiem": 20, "url": "" },
+                    "20_2": { "cauhoi": "What is the first month of the third quarter of a calendar year?", "dapan": "July", "mucdiem": 20, "url": "" },
+                    "20_3": { "cauhoi": "Điền từ còn thiếu vào câu ca dao sau:\n“Tay bưng chén muối đĩa gừng\n__________ xin đừng quên nhau.”", "dapan": "“Gừng cay muối mặn”", "mucdiem": 20, "url": "" },
+                    "20_4": { "cauhoi": "Về vị trí địa lí, phần đất liền của nước ta có chung đường biên giới với những quốc gia nào?", "dapan": "Trung Quốc, Lào, Campuchia", "mucdiem": 20, "url": "" },
+                    "20_5": { "cauhoi": "In which province is the highest mountain in Vietnam located?", "dapan": "Lao Cai", "mucdiem": 20, "url": "" },
+                    "20_6": { "cauhoi": "What is the total number of faces, vertices, and edges of a cube combined?", "dapan": "26 (6 faces + 8 vertices + 12 edges).", "mucdiem": 20, "url": "" },
+                    "20_7": { "cauhoi": "What does the \"Gen\" in \"Gen-Z\" stand for?", "dapan": "Generation", "mucdiem": 20, "url": "" },
+                    "20_8": { "cauhoi": "Danh họa Pablo Picasso là người nước nào?", "dapan": "Tây Ban Nha", "mucdiem": 20, "url": "" },
+                    "20_9": { "cauhoi": "Vào nửa sau thế kỉ XIX, trong khi hầu hết các quốc gia ở Đông Nam Á đều trở thành thuộc địa của thực dân phương Tây, thì quốc gia nào trong khu vực vẫn giữ được nền độc lập tương đối?", "dapan": "Xiêm (hoặc Thái Lan).", "mucdiem": 20, "url": "" },
+                    "20_10": { "cauhoi": "It is made of glass or plastic with a rubber bulb and is used to transfer small quantities of liquids in chemical experiments. What is it?", "dapan": "Dropper/ Pipette", "mucdiem": 20, "url": "" },
+                    "20_11": { "cauhoi": "When I was 4 years old, my brother was half my age. Now, I am 18. How old is my brother?", "dapan": "16 years old.", "mucdiem": 20, "url": "" },
+                    "20_12": { "cauhoi": "Bào quan nào được xem là trung tâm năng lượng của tế bào?", "dapan": "Ti thể", "mucdiem": 20, "url": "" },
+                    "30_1": { "cauhoi": "A person travels from A to B by motorbike at a speed of 40 km/h. On the return trip, they travel at a speed of 30 km/h. Given that the return trip takes 1 hour longer than the initial trip, calculate the distance AB.", "dapan": "120km", "mucdiem": 30, "url": "" },
+                    "30_2": { "cauhoi": "What is the medical condition in which the body cannot produce enough insulin to control blood sugar levels?", "dapan": "Diabetes", "mucdiem": 30, "url": "" },
+                    "30_3": { "cauhoi": "Danh họa Pablo Picasso là người nước nào?", "dapan": "Danh họa Pablo Picasso là người nước nào?", "mucdiem": 30, "url": "" },
+                    "30_4": { "cauhoi": "Có 4 vật nhiễm điện A, B, C, D. Biết B nhiễm điện dương. Vật A hút B nhưng lại đẩy C. Vật C hút vật D. Hỏi vật D nhiễm điện gì ?", "dapan": "D nhiễm điện dương", "mucdiem": 30, "url": "" },
+                    "30_5": { "cauhoi": "Vừa gà vừa chó,\nBó lại cho tròn. \nBa mươi sáu con, \nMột trăm chân chẵn.\nHỏi có bao nhiêu con gà, bao nhiêu con chó?", "dapan": "22 con gà và 14 con chó", "mucdiem": 30, "url": "" },
+                    "30_6": { "cauhoi": "Lá cờ này thuôvj về quốc gia nào ?", "dapan": "Lấy li số 2 đổ nước sang li số 5 và để lại vị trí cũ.", "mucdiem": 30, "url": "https://toursingapore.net/images/van-hoa/nhung-bieu-tuong-quoc-gia-singapore-2.jpg" },
+                    "30_7": { "cauhoi": "Lan có một người anh trai. Hỏi Lan phải gọi bố vợ của em rể của chồng chị dâu của mình là gì?", "dapan": "Bố", "mucdiem": 30, "url": "" },
+                    "30_8": { "cauhoi": "In a calendar year, a month whose name starts with the letter D has how many days?", "dapan": "Thirty-one", "mucdiem": 30, "url": "" },
+                    "30_9": { "cauhoi": "Nếu nhìn từ đỉnh tháp xuống thì ta thấy hình nào trong các hình dưới đây?", "dapan": "Hình 3", "mucdiem": 30, "url": "" },
+                    "30_10": { "cauhoi": "Sắp xếp đúng thứ tự xe ưu tiên khi tham gia giao thông theo Luật giao thông đường bộ năm 2024.\nA. Xe cứu thương\nB. Xe quân sự, xe công an đang làm nhiệm vụ\nC. Xe cứu hỏa\nD. Xe khắc phục sự cố thiên tai", "dapan": "C – B – A - D", "mucdiem": 30, "url": "" },
+                    "30_11": { "cauhoi": "Trong hai vịnh lớn của Biển Đông, vịnh nào là vịnh duy nhất nằm hoàn toàn trong vùng nội thủy và lãnh hải của Việt Nam và Trung Quốc?", "dapan": "Vịnh Bắc Bộ", "mucdiem": 30, "url": "" },
+                    "30_12": { "cauhoi": "Nguời được mệnh danh là \"vua vũ khí\" của Việt Nam. Ông là ai ?", "dapan": "12 cái", "mucdiem": 30, "url": "https://vusta.vnmediacdn.com/images/2025/08/26/9919-1756178407-tran-dai-nghia-3.jpg" }
+                }
+            }
+        };
+
+        // =========================================================================
+        // 2. STATE QUẢN LÝ TOÀN CỤC
+        // =========================================================================
+        let rootDatabaseJson = {};          // Dữ liệu JSON gốc từ Firebase
+        let tablesCatalog = {};             // Danh mục các bảng MySQL đã chuyển đổi
+        let mappingMode = 'game_schema';    // 'game_schema' | 'raw_tree'
+        let rawLayoutMode = 'grouped';      // 'grouped' | 'flat'
+        let currentSelection = {
+            type: 'table',
+            tableName: 'vong1_chung',
+            subGroup: null
+        };
+        let activeTable = null;
+        let selectedRowUids = new Set();
+        let sortConfig = { key: null, direction: 'asc' };
+        let exportScope = 'table';
+        let isLiveFirebase = false;
+        let autoRefreshInterval = null;
+        let expandedSidebarNodes = new Set(['vong1_chung', 'vong1_rieng', 'vong2', 'vong3', 'vong4']);
+        let collapsedGroupCards = new Set();
+
+        // =========================================================================
+        // 3. KHỞI TẠO: TỰ ĐỘNG KẾT NỐI & TẢI TRỰC TIẾP TỪ FIREBASE KHI MỞ / F5
+        // =========================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            // Mặc định luôn gọi fetch GET trực tiếp từ Firebase Server khi tải trang hoặc F5
+            fetchFirebaseData(false);
+
+            document.getElementById('auto-refresh-toggle').addEventListener('change', function(e) {
+                if (e.target.checked) {
+                    showToast('Đã bật tự động đồng bộ mỗi 5 giây', 'info');
+                    autoRefreshInterval = setInterval(() => fetchFirebaseData(true), 5000);
+                } else {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                    showToast('Đã tắt tự động đồng bộ', 'info');
+                }
+            });
+
+            document.getElementById('firebase-url').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') fetchFirebaseData(false);
+            });
+        });
+
+        function setSyncStatusBadge(state, detail = '') {
+            const badge = document.getElementById('connection-status-badge');
+            if (state === 'loading') {
+                badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300';
+                badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>${escapeHtml(detail || 'Đang đồng bộ...')}`;
+            } else if (state === 'saving') {
+                badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-100 text-sky-800 border border-sky-300';
+                badge.innerHTML = `<i class="fa-solid fa-cloud-arrow-up fa-bounce mr-1.5"></i>${escapeHtml(detail || 'Đang lưu lên Firebase...')}`;
+            } else if (state === 'live') {
+                badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300';
+                badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1.5 text-emerald-600"></i>${escapeHtml(detail || 'Đã đồng bộ Firebase (Live)')}`;
+            } else if (state === 'error') {
+                badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-800 border border-red-300';
+                badge.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1.5 text-red-600"></i>${escapeHtml(detail || 'Lỗi đồng bộ Firebase')}`;
+            } else {
+                badge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-200 text-slate-800 border border-slate-300';
+                badge.innerHTML = `<i class="fa-solid fa-hard-drive mr-1.5"></i>${escapeHtml(detail || 'Cache / Dữ liệu dự phòng')}`;
+            }
+        }
+
+        function saveToLocalBackup() {
+            try {
+                localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(rootDatabaseJson));
+            } catch (_) {}
+        }
+
+        function loadFallbackSample(notify = false) {
+            isLiveFirebase = false;
+            rootDatabaseJson = JSON.parse(JSON.stringify(FALLBACK_GAME_JSON));
+            setSyncStatusBadge('local', 'Dữ liệu Mẫu Dự Phòng');
+            document.getElementById('fallback-banner').classList.remove('hidden');
+            document.getElementById('fallback-title').textContent = 'Đang hiển thị bộ dữ liệu mẫu dự phòng (Offline)';
+            document.getElementById('fallback-desc').textContent = '— Bấm "Kết nối & Tải lại" để đồng bộ với Firebase.';
+            rebuildCurrentCatalog();
+            updateTimestamp();
+            if (notify) showToast('Đã nạp dữ liệu JSON mẫu dự phòng', 'info');
+        }
+
+        function setMappingMode(mode) {
+            mappingMode = mode;
+            const btnGame = document.getElementById('btn-schema-game');
+            const btnRaw = document.getElementById('btn-schema-raw');
+            const flattenWrap = document.getElementById('flatten-wrapper');
+
+            if (mode === 'game_schema') {
+                btnGame.className = 'px-2.5 py-1 rounded-md text-xs font-semibold flex items-center space-x-1.5 bg-amber-500 text-slate-950 transition cursor-pointer';
+                btnRaw.className = 'px-2.5 py-1 rounded-md text-xs font-medium flex items-center space-x-1.5 text-slate-300 hover:text-white transition cursor-pointer';
+                flattenWrap.classList.add('hidden');
+            } else {
+                btnRaw.className = 'px-2.5 py-1 rounded-md text-xs font-semibold flex items-center space-x-1.5 bg-sky-500 text-white transition cursor-pointer';
+                btnGame.className = 'px-2.5 py-1 rounded-md text-xs font-medium flex items-center space-x-1.5 text-slate-300 hover:text-white transition cursor-pointer';
+                flattenWrap.classList.remove('hidden');
+            }
+
+            rebuildCurrentCatalog();
+            showToast(mode === 'game_schema' ? 'Đã chuyển sang Chuẩn hóa phpMyAdmin (Game Schema)' : 'Đã chuyển sang Cây Firebase gốc (Raw Tree)', 'info');
+        }
+
+        function setRawLayoutMode(mode) {
+            rawLayoutMode = mode;
+            const btnG = document.getElementById('btn-raw-grouped');
+            const btnF = document.getElementById('btn-raw-flat');
+            if (mode === 'grouped') {
+                btnG.className = 'px-2 py-0.5 rounded text-[11px] font-semibold bg-purple-600 text-white cursor-pointer';
+                btnF.className = 'px-2 py-0.5 rounded text-[11px] font-medium text-purple-900 cursor-pointer';
+            } else {
+                btnF.className = 'px-2 py-0.5 rounded text-[11px] font-semibold bg-sky-600 text-white cursor-pointer';
+                btnG.className = 'px-2 py-0.5 rounded text-[11px] font-medium text-purple-900 cursor-pointer';
+            }
+            renderTable();
+        }
+
+        // =========================================================================
+        // 4. BỘ CHUYỂN ĐỔI RELATIONAL MAPPER (GAME SCHEMA CHUẨN PHPMYADMIN)
+        // =========================================================================
+        function rebuildCurrentCatalog() {
+            selectedRowUids.clear();
+            if (mappingMode === 'game_schema') {
+                tablesCatalog = buildGameSchemaCatalog(rootDatabaseJson);
+            } else {
+                tablesCatalog = buildRawTreeCatalog(rootDatabaseJson);
+            }
+
+            renderSidebarTree();
+            renderDatabaseOverview();
+
+            const tableNames = Object.keys(tablesCatalog);
+            if (currentSelection.type === 'table' && tablesCatalog[currentSelection.tableName]) {
+                selectTable(currentSelection.tableName, currentSelection.subGroup, false);
+            } else if (tableNames.includes('vong1_chung')) {
+                selectTable('vong1_chung', null, false);
+            } else if (tableNames.length > 0) {
+                selectTable(tableNames[0], null, false);
+            } else {
+                selectDatabaseOverview(false);
+            }
+        }
+
+        function buildGameSchemaCatalog(json) {
+            const catalog = {};
+
+            // 1. Bảng `diemso`
+            if (json.diemso && typeof json.diemso === 'object') {
+                const rows = Object.entries(json.diemso).map(([id, obj]) => ({
+                    _uid: `diemso:${id}`,
+                    _meta: {
+                        firebasePath: `diemso/${id}`,
+                        rowId: id,
+                        pkCol: 'id',
+                        rowType: 'map_item'
+                    },
+                    _targetPath: `diemso/${id}`,
+                    _patchStatePath: null,
+                    id: id,
+                    tendoi: obj?.tendoi ?? '',
+                    diem: Number.isFinite(Number(obj?.diem)) ? Number(obj.diem) : 0
+                }));
+                catalog['diemso'] = {
+                    name: 'diemso',
+                    badge: 'SCHEMA',
+                    description: 'Bảng điểm các đội thi',
+                    primaryKey: 'id',
+                    columns: ['id', 'tendoi', 'diem'],
+                    stateColumns: [],
+                    filterColumn: null,
+                    rows
+                };
+            }
+
+            // 2. Hàm helper dựng bảng cho Vòng 1 (`vong1_chung`, `vong1_rieng`, `vong1_rieng_sub`)
+            const mapVong1Node = (tableName, nodeObj, basePath, includeLinhVuc = false) => {
+                if (!nodeObj || typeof nodeObj !== 'object') return;
+                const ms = nodeObj.match_state || {};
+                const cfg = ms.config || { ketvong: false, show: false };
+                const dananThiSinhObj = {
+                    _config: { show: String(cfg.show ?? false), ketvong: cfg.ketvong ? 'True' : 'False' }
+                };
+                if (ms.goidadung) dananThiSinhObj.goidadung = ms.goidadung;
+                const dananThiSinhJson = JSON.stringify(dananThiSinhObj);
+
+                const rows = [];
+                if (nodeObj.question_bank && typeof nodeObj.question_bank === 'object') {
+                    Object.entries(nodeObj.question_bank).forEach(([goiKey, arr]) => {
+                        if (!Array.isArray(arr)) return;
+                        arr.forEach((item, idx) => {
+                            if (!item || typeof item !== 'object') return;
+                            const row = {
+                                _uid: `${tableName}:${goiKey}:${idx}`,
+                                _meta: {
+                                    firebasePath: `${basePath}/question_bank/${goiKey}/${idx}`,
+                                    rowId: idx,
+                                    groupKey: goiKey,
+                                    pkCol: 'sttcau',
+                                    rowType: 'vong1_question'
+                                },
+                                _targetPath: `${basePath}/question_bank/${goiKey}/${idx}`,
+                                _patchStatePath: `${basePath}/match_state`,
+                                idgoi: goiKey,
+                                sttcau: idx,
+                                cauhoi: item.cauhoi ?? '',
+                                danan: item.dapan ?? ''
+                            };
+                            if (includeLinhVuc || item.linhvuc !== undefined) {
+                                row.linhvuc = item.linhvuc ?? '';
+                            }
+                            if (ms.cauhoiopen !== undefined) {
+                                row.cauhoiopen = ms.cauhoiopen ?? '';
+                            }
+                            row.dananthisinh = dananThiSinhJson;
+                            row.cauhoihientai = ms.cauhoihientai ?? '';
+                            row.thoigian = Number.isFinite(Number(ms.thoigian)) ? Number(ms.thoigian) : 0;
+                            row.doihientai = ms.goihientai ? `${ms.doihientai || ''}|${String(ms.goihientai).toUpperCase()}` : (ms.doihientai ?? '');
+                            rows.push(row);
+                        });
+                    });
+                }
+
+                // Nếu node chỉ có match_state (chưa có question_bank hoặc question_bank rỗng), vẫn tạo 1 dòng trạng thái để không bị mất bảng
+                if (rows.length === 0) {
+                    const stateRow = {
+                        _uid: `${tableName}:_state`,
+                        _meta: {
+                            firebasePath: `${basePath}/match_state`,
+                            rowId: '_state',
+                            groupKey: ms.goihientai || 'goi1',
+                            pkCol: 'sttcau',
+                            rowType: 'vong1_state_only'
+                        },
+                        _targetPath: `${basePath}/match_state`,
+                        _patchStatePath: `${basePath}/match_state`,
+                        idgoi: ms.goihientai || '',
+                        sttcau: 0,
+                        cauhoi: '',
+                        danan: ''
+                    };
+                    if (includeLinhVuc) {
+                        stateRow.linhvuc = '';
+                    }
+                    if (ms.cauhoiopen !== undefined) {
+                        stateRow.cauhoiopen = ms.cauhoiopen ?? '';
+                    }
+                    stateRow.dananthisinh = dananThiSinhJson;
+                    stateRow.cauhoihientai = ms.cauhoihientai ?? '';
+                    stateRow.thoigian = Number.isFinite(Number(ms.thoigian)) ? Number(ms.thoigian) : 0;
+                    stateRow.doihientai = ms.goihientai ? `${ms.doihientai || ''}|${String(ms.goihientai).toUpperCase()}` : (ms.doihientai ?? '');
+                    rows.push(stateRow);
+                }
+
+                const hasLinhVuc = includeLinhVuc || rows.some(r => r.linhvuc !== undefined);
+                const hasCauHoiOpen = ms.cauhoiopen !== undefined || rows.some(r => r.cauhoiopen !== undefined);
+                const cols = ['idgoi', 'sttcau', 'cauhoi', 'danan'];
+                if (hasLinhVuc) cols.push('linhvuc');
+                if (hasCauHoiOpen) cols.push('cauhoiopen');
+                cols.push('dananthisinh', 'cauhoihientai', 'thoigian', 'doihientai');
+
+                catalog[tableName] = {
+                    name: tableName,
+                    badge: 'SCHEMA',
+                    description: `Ngân hàng câu hỏi & trạng thái ${tableName}`,
+                    primaryKey: 'sttcau',
+                    columns: cols,
+                    stateColumns: hasCauHoiOpen
+                        ? ['cauhoiopen', 'dananthisinh', 'cauhoihientai', 'thoigian', 'doihientai']
+                        : ['dananthisinh', 'cauhoihientai', 'thoigian', 'doihientai'],
+                    filterColumn: 'idgoi',
+                    rows
+                };
+            };
+
+            if (json.vong1_chung) {
+                mapVong1Node('vong1_chung', json.vong1_chung, 'vong1_chung', false);
+            }
+            if (json.vong1_rieng) {
+                mapVong1Node('vong1_rieng', json.vong1_rieng, 'vong1_rieng', true);
+                if (json.vong1_rieng.vong1_rieng) {
+                    mapVong1Node('vong1_rieng_sub', json.vong1_rieng.vong1_rieng, 'vong1_rieng/vong1_rieng', false);
+                }
+            }
+
+            // 3. Bảng `vong2` (Vượt chướng ngại vật)
+            if (json.vong2 && json.vong2.question_bank) {
+                const ms = json.vong2.match_state || {};
+                const qb = json.vong2.question_bank || {};
+                const tt = json.vong2.trangThai || {};
+                const hangNgangArr = Array.isArray(qb.hangngang) ? qb.hangngang : [];
+                const statusArr = Array.isArray(ms.trangthai_hangngang) ? ms.trangthai_hangngang : [];
+
+                const openList = [];
+                statusArr.forEach((st, idx) => {
+                    if (idx > 0 && st === 'DA_MO') openList.push(`cau${idx}`);
+                });
+                const cauhoiOpenStr = openList.join(',');
+
+                const rows = [];
+                hangNgangArr.forEach((item, idx) => {
+                    if (!item || typeof item !== 'object') return;
+                    rows.push({
+                        _uid: `vong2:${idx}`,
+                        _meta: {
+                            firebasePath: `vong2/question_bank/hangngang/${idx}`,
+                            rowId: idx,
+                            pkCol: 'id',
+                            rowType: 'vong2_question'
+                        },
+                        _targetPath: `vong2/question_bank/hangngang/${idx}`,
+                        _patchStatePath: `vong2/match_state`,
+                        id: idx,
+                        sttcau: idx,
+                        cauhoi: item.cauhoi ?? '',
+                        danan: item.dapan ?? '',
+                        sokytu: item.sokytu ?? '',
+                        cauhoiopen: cauhoiOpenStr,
+                        cauhoihientai: ms.cauhoihientai ?? '',
+                        statusdapan: statusArr[idx] ?? '',
+                        tukhoa: qb.tukhoa ?? '',
+                        chuong_cnv: JSON.stringify(ms.chuong_cnv || {}),
+                        thoigian: tt.timerRemaining ?? ms.thoigian ?? 0
+                    });
+                });
+
+                catalog['vong2'] = {
+                    name: 'vong2',
+                    badge: 'SCHEMA',
+                    description: 'Vượt chướng ngại vật (Hàng ngang & Từ khóa)',
+                    primaryKey: 'id',
+                    columns: ['id', 'sttcau', 'cauhoi', 'danan', 'sokytu', 'cauhoiopen', 'cauhoihientai', 'statusdapan', 'tukhoa', 'chuong_cnv', 'thoigian'],
+                    stateColumns: ['cauhoiopen', 'cauhoihientai', 'tukhoa', 'chuong_cnv', 'thoigian'],
+                    filterColumn: null,
+                    rows
+                };
+            }
+
+            // 4. Bảng `vong3` (Tăng tốc)
+            if (json.vong3 && Array.isArray(json.vong3.question_bank)) {
+                const ms = json.vong3.match_state || {};
+                const dananDoiJson = JSON.stringify({
+                    _config: ms.config || { show_dapan: false },
+                    ...(ms.danan_cacdoi || {})
+                });
+
+                const rows = [];
+                json.vong3.question_bank.forEach((item, idx) => {
+                    if (!item || typeof item !== 'object') return;
+                    rows.push({
+                        _uid: `vong3:${idx}`,
+                        _meta: {
+                            firebasePath: `vong3/question_bank/${idx}`,
+                            rowId: idx,
+                            pkCol: 'id',
+                            rowType: 'vong3_question'
+                        },
+                        _targetPath: `vong3/question_bank/${idx}`,
+                        _patchStatePath: `vong3/match_state`,
+                        id: idx,
+                        sttcau: idx,
+                        cauhoi: item.cauhoi ?? '',
+                        danan: item.dapan ?? '',
+                        thoigian_giay: item.thoigian_giay ?? 30,
+                        url: item.url ?? '',
+                        goiy: item.goiy ? JSON.stringify(item.goiy) : '',
+                        dananthisinh: dananDoiJson,
+                        cauhoihientai: ms.cauhoihientai ?? '',
+                        thoigian: ms.thoigian ?? 0
+                    });
+                });
+
+                catalog['vong3'] = {
+                    name: 'vong3',
+                    badge: 'SCHEMA',
+                    description: 'Tăng tốc (Câu hỏi, Gợi ý & Đáp án 4 đội)',
+                    primaryKey: 'id',
+                    columns: ['id', 'sttcau', 'cauhoi', 'danan', 'thoigian_giay', 'url', 'goiy', 'dananthisinh', 'cauhoihientai', 'thoigian'],
+                    stateColumns: ['dananthisinh', 'cauhoihientai', 'thoigian'],
+                    filterColumn: null,
+                    rows
+                };
+            }
+
+            // 5. Bảng `vong4` (Về đích)
+            if (json.vong4 && json.vong4.question_bank && typeof json.vong4.question_bank === 'object') {
+                const ms = json.vong4.match_state || {};
+                const rows = Object.entries(json.vong4.question_bank).map(([qKey, item]) => {
+                    const parts = qKey.split('_');
+                    const parsedMucDiem = Number(parts[0]);
+                    return {
+                        _uid: `vong4:${qKey}`,
+                        _meta: {
+                            firebasePath: `vong4/question_bank/${qKey}`,
+                            rowId: qKey,
+                            pkCol: 'id',
+                            rowType: 'vong4_question'
+                        },
+                        _targetPath: `vong4/question_bank/${qKey}`,
+                        _patchStatePath: `vong4/match_state`,
+                        id: qKey,
+                        mucdiem: item.mucdiem ?? (Number.isFinite(parsedMucDiem) ? parsedMucDiem : 20),
+                        cauhoi: item.cauhoi ?? '',
+                        danan: item.dapan ?? '',
+                        url: item.url ?? '',
+                        cauhoihientai: ms.cauhoihientai ?? '',
+                        doihientai: ms.doihientai ?? '',
+                        goi_da_chon: ms.goi_da_chon ?? '',
+                        ngoisao: ms.ngoisao ?? false,
+                        trangthai: ms.trangthai ?? '',
+                        thoigian: ms.thoigian ?? 0
+                    };
+                });
+
+                catalog['vong4'] = {
+                    name: 'vong4',
+                    badge: 'SCHEMA',
+                    description: 'Về đích (Gói câu hỏi 20 & 30 điểm)',
+                    primaryKey: 'id',
+                    columns: ['id', 'mucdiem', 'cauhoi', 'danan', 'url', 'cauhoihientai', 'doihientai', 'goi_da_chon', 'ngoisao', 'trangthai', 'thoigian'],
+                    stateColumns: ['cauhoihientai', 'doihientai', 'goi_da_chon', 'ngoisao', 'trangthai', 'thoigian'],
+                    filterColumn: 'mucdiem',
+                    rows
+                };
+            }
+
+            // Fallback sang Raw Tree cho các node tùy chỉnh ngoài 5 nhóm trên (hoặc node chưa có question_bank)
+            Object.entries(json).forEach(([k, v]) => {
+                if (!catalog[k] && v !== null && typeof v === 'object') {
+                    catalog[k] = buildSingleRawNodeTable(k, v, null);
+                }
+            });
+
+            return catalog;
+        }
+
+        // =========================================================================
+        // 5. BỘ PHÂN TÍCH CÂY FIREBASE GỐC (RAW TREE: MAP, GROUPED, 1-ROW, VARS)
+        // =========================================================================
+        function flattenObject(obj, prefix = '', res = {}) {
+            for (const [k, v] of Object.entries(obj)) {
+                const newKey = prefix ? `${prefix}.${k}` : k;
+                if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+                    flattenObject(v, newKey, res);
+                } else {
+                    res[newKey] = v;
+                }
+            }
+            return res;
+        }
+
+        function unflattenObject(flatObj) {
+            const result = {};
+            for (const [key, val] of Object.entries(flatObj)) {
+                if (key.includes('.')) {
+                    const parts = key.split('.');
+                    let curr = result;
+                    for (let i = 0; i < parts.length - 1; i++) {
+                        if (!curr[parts[i]] || typeof curr[parts[i]] !== 'object') curr[parts[i]] = {};
+                        curr = curr[parts[i]];
+                    }
+                    curr[parts[parts.length - 1]] = val;
+                } else {
+                    result[key] = val;
+                }
+            }
+            return result;
+        }
+
+        function buildSingleRawNodeTable(nodeName, nodeData, subGroupFilter = null) {
+            const useFlatten = document.getElementById('flatten-toggle')?.checked ?? true;
+            const rows = [];
+            const colSet = new Set();
+            const groups = [];
+            let schemaType = 'single_row';
+            let primaryKey = 'id';
+
+            if (Array.isArray(nodeData)) {
+                schemaType = 'array_1indexed';
+                primaryKey = 'index';
+                nodeData.forEach((item, idx) => {
+                    if (item === null || item === undefined) return;
+                    const processed = (typeof item === 'object' && useFlatten) ? flattenObject(item) : (typeof item === 'object' ? item : { value: item });
+                    Object.keys(processed).forEach(k => colSet.add(k));
+                    rows.push({
+                        _uid: `${nodeName}:${idx}`,
+                        _meta: {
+                            firebasePath: `${nodeName}/${idx}`,
+                            rowId: idx,
+                            pkCol: 'index',
+                            rowType: 'array_1indexed'
+                        },
+                        _targetPath: `${nodeName}/${idx}`,
+                        _group: subGroupFilter || nodeName,
+                        index: idx,
+                        ...processed
+                    });
+                });
+            } else if (nodeData && typeof nodeData === 'object') {
+                const entries = Object.entries(nodeData);
+                const arrayChildren = entries.filter(([_, v]) => Array.isArray(v));
+                const objectChildren = entries.filter(([_, v]) => v !== null && typeof v === 'object' && !Array.isArray(v));
+                const primitiveChildren = entries.filter(([_, v]) => v === null || typeof v !== 'object');
+
+                if (arrayChildren.length > 0 && arrayChildren.length >= objectChildren.length) {
+                    schemaType = 'grouped_array';
+                    primaryKey = 'index';
+                    colSet.add('group');
+                    entries.forEach(([grpKey, arrVal]) => {
+                        if (!Array.isArray(arrVal)) return;
+                        groups.push(grpKey);
+                        if (subGroupFilter && subGroupFilter !== grpKey) return;
+                        arrVal.forEach((item, idx) => {
+                            if (item === null || item === undefined) return;
+                            const processed = (typeof item === 'object' && useFlatten) ? flattenObject(item) : (typeof item === 'object' ? item : { value: item });
+                            Object.keys(processed).forEach(k => colSet.add(k));
+                            rows.push({
+                                _uid: `${nodeName}:${grpKey}:${idx}`,
+                                _meta: {
+                                    firebasePath: `${nodeName}/${grpKey}/${idx}`,
+                                    rowId: idx,
+                                    groupKey: grpKey,
+                                    pkCol: 'index',
+                                    rowType: 'grouped_array'
+                                },
+                                _targetPath: `${nodeName}/${grpKey}/${idx}`,
+                                _group: grpKey,
+                                group: grpKey,
+                                index: idx,
+                                ...processed
+                            });
+                        });
+                    });
+                } else if (objectChildren.length >= 2 && primitiveChildren.length === 0) {
+                    schemaType = 'object_map';
+                    primaryKey = 'id';
+                    entries.forEach(([rowKey, rowVal]) => {
+                        const processed = useFlatten ? flattenObject(rowVal) : rowVal;
+                        Object.keys(processed).forEach(k => colSet.add(k));
+                        rows.push({
+                            _uid: `${nodeName}:${rowKey}`,
+                            _meta: {
+                                firebasePath: `${nodeName}/${rowKey}`,
+                                rowId: rowKey,
+                                pkCol: 'id',
+                                rowType: 'object_map'
+                            },
+                            _targetPath: `${nodeName}/${rowKey}`,
+                            id: rowKey,
+                            ...processed
+                        });
+                    });
+                } else {
+                    schemaType = 'single_row';
+                    primaryKey = null;
+                    const processed = useFlatten ? flattenObject(nodeData) : nodeData;
+                    Object.keys(processed).forEach(k => colSet.add(k));
+                    rows.push({
+                        _uid: `${nodeName}:single`,
+                        _meta: {
+                            firebasePath: `${nodeName}`,
+                            rowId: 'single',
+                            pkCol: null,
+                            rowType: 'single_row'
+                        },
+                        _targetPath: `${nodeName}`,
+                        ...processed
+                    });
+                }
+            }
+
+            const orderedCols = primaryKey ? [primaryKey, ...Array.from(colSet)] : Array.from(colSet);
+            return {
+                name: subGroupFilter ? `${nodeName}.${subGroupFilter}` : nodeName,
+                baseNodeName: nodeName,
+                subGroup: subGroupFilter,
+                badge: schemaType === 'grouped_array' ? 'GROUPED' : schemaType === 'object_map' ? 'MAP' : schemaType === 'single_row' ? '1-ROW' : 'GROUPED',
+                schemaType,
+                description: `Node Firebase /${nodeName}`,
+                primaryKey: primaryKey || orderedCols[0],
+                columns: orderedCols,
+                stateColumns: [],
+                filterColumn: groups.length > 0 ? 'group' : null,
+                groups,
+                rows
+            };
+        }
+
+        function buildRawTreeCatalog(json) {
+            const catalog = {};
+            const rootVars = {};
+            let hasRootVars = false;
+
+            Object.entries(json).forEach(([k, v]) => {
+                if (v === null || typeof v !== 'object') {
+                    rootVars[k] = v;
+                    hasRootVars = true;
+                } else {
+                    catalog[k] = buildSingleRawNodeTable(k, v, null);
+                }
+            });
+
+            if (hasRootVars) {
+                const rows = Object.entries(rootVars).map(([k, v]) => ({
+                    _uid: `root:${k}`,
+                    _meta: {
+                        firebasePath: k,
+                        rowId: k,
+                        pkCol: 'key',
+                        rowType: 'key_value'
+                    },
+                    _targetPath: k,
+                    key: k,
+                    value: v
+                }));
+                catalog['root_variables'] = {
+                    name: 'root_variables',
+                    badge: 'VARS',
+                    schemaType: 'key_value',
+                    description: 'Biến nguyên thủy tại Root',
+                    primaryKey: 'key',
+                    columns: ['key', 'value'],
+                    stateColumns: [],
+                    filterColumn: null,
+                    rows
+                };
+            }
+            return catalog;
+        }
+
+        // =========================================================================
+        // 6. KẾT NỐI & ĐỒNG BỘ 2 CHIỀU THỰC TẾ VỚI FIREBASE REALTIME DATABASE
+        // =========================================================================
+        function getBaseFirebaseUrl() {
+            let url = document.getElementById('firebase-url').value.trim();
+            return url.replace(/\/\.json(\?.*)?$/, '').replace(/\.json(\?.*)?$/, '').replace(/\/$/, '');
+        }
+
+        async function fetchFirebaseData(isSilent = false) {
+            let rawUrl = document.getElementById('firebase-url').value.trim();
+            if (!rawUrl) {
+                showToast('Vui lòng nhập URL Firebase JSON!', 'error');
+                return;
+            }
+            const cleanBase = getBaseFirebaseUrl();
+            const displayUrl = `${cleanBase}/.json`;
+            document.getElementById('firebase-url').value = displayUrl;
+
+            // Thêm ?t=Date.now() và cache: 'no-store' để chống cache tuyệt đối khi F5
+            const fetchUrl = `${displayUrl}?t=${Date.now()}`;
+            const fetchIcon = document.getElementById('fetch-icon');
+            fetchIcon.classList.add('fa-spin');
+            if (!isSilent) setSyncStatusBadge('loading', 'Đang tải từ Firebase...');
+
+            try {
+                const urlObj = new URL(displayUrl);
+                const dbName = urlObj.hostname.split('.')[0].replace(/-/g, '_') || 'firebase_rtdb';
+                document.getElementById('breadcrumb-db').textContent = dbName;
+                document.getElementById('sidebar-db-name').textContent = dbName;
+
+                const res = await fetch(fetchUrl, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' }
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+
+                const data = await res.json();
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Dữ liệu trả về từ Firebase rỗng hoặc không phải JSON Object');
+                }
+
+                const urlPath = urlObj.pathname.replace(/\/\.json$/, '').replace(/\.json$/, '').replace(/^\//, '');
+                rootDatabaseJson = urlPath ? { [urlPath.split('/').pop()]: data } : data;
+
+                isLiveFirebase = true;
+                saveToLocalBackup();
+                setSyncStatusBadge('live', 'Đã đồng bộ Firebase (Live)');
+                document.getElementById('fallback-banner').classList.add('hidden');
+
+                rebuildCurrentCatalog();
+                updateTimestamp();
+                if (!isSilent) showToast('Đã tải dữ liệu mới nhất từ Firebase Realtime Database!', 'success');
+            } catch (err) {
+                isLiveFirebase = false;
+                // Thử khôi phục từ localStorage nếu có, nếu không dùng FALLBACK_GAME_JSON
+                let restoredFromCache = false;
+                try {
+                    const cached = localStorage.getItem(LOCAL_BACKUP_KEY);
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (parsed && typeof parsed === 'object') {
+                            rootDatabaseJson = parsed;
+                            restoredFromCache = true;
+                        }
+                    }
+                } catch (_) {}
+
+                if (!restoredFromCache) {
+                    rootDatabaseJson = JSON.parse(JSON.stringify(FALLBACK_GAME_JSON));
+                }
+
+                setSyncStatusBadge('error', 'Mất kết nối Firebase (Đang dùng bản dự phòng)');
+                document.getElementById('fallback-banner').classList.remove('hidden');
+                document.getElementById('fallback-title').textContent = `Không thể tải từ Firebase (${err.message})`;
+                document.getElementById('fallback-desc').textContent = restoredFromCache
+                    ? '— Đang hiển thị bản sao lưu gần nhất trong localStorage.'
+                    : '— Đang hiển thị bộ dữ liệu JSON mẫu dự phòng.';
+
+                rebuildCurrentCatalog();
+                updateTimestamp();
+                if (!isSilent) showToast(`Lỗi kết nối Firebase: ${err.message}`, 'error');
+            } finally {
+                fetchIcon.classList.remove('fa-spin');
+            }
+        }
+
+        /**
+         * Đẩy dữ liệu tại một đường dẫn cụ thể (PUT / DELETE) lên Firebase Realtime Database
+         */
+        async function syncPathToFirebase(targetPath, payloadData, method = 'PUT') {
+            saveToLocalBackup();
+            if (!targetPath) return true;
+
+            // Kiểm tra nghiêm ngặt đường dẫn không chứa NaN, undefined hoặc null segment
+            const segments = String(targetPath).split('/').filter(Boolean);
+            const hasInvalidSegment = segments.length === 0 || segments.some(seg =>
+                seg === 'NaN' || seg === 'undefined' || seg === 'null'
+            );
+            if (hasInvalidSegment) {
+                setSyncStatusBadge('error', 'Đường dẫn node không hợp lệ');
+                showToast(`Hủy ghi Firebase do đường dẫn chứa segment lỗi: /${targetPath}`, 'error');
+                return false;
+            }
+
+            const baseUrl = getBaseFirebaseUrl();
+            if (!baseUrl) return false;
+
+            const endpoint = `${baseUrl}/${segments.join('/')}.json`;
+            setSyncStatusBadge('saving', 'Đang lưu lên Firebase...');
+
+            try {
+                const options = {
+                    method: method,
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' }
+                };
+                if (method !== 'DELETE') {
+                    options.body = JSON.stringify(payloadData);
+                }
+
+                const res = await fetch(endpoint, options);
+                if (!res.ok) {
+                    let errDetail = `${res.status} ${res.statusText}`;
+                    try {
+                        const errJson = await res.json();
+                        if (errJson && errJson.error) errDetail = `${res.status}: ${errJson.error}`;
+                    } catch (_) {}
+
+                    setSyncStatusBadge('error', `Lỗi ghi Firebase (${res.status})`);
+                    document.getElementById('fallback-banner').classList.remove('hidden');
+                    document.getElementById('fallback-title').textContent = `Firebase từ chối ghi dữ liệu (${errDetail})`;
+                    document.getElementById('fallback-desc').textContent = res.status === 401 || res.status === 403
+                        ? '— Kiểm tra Firebase Realtime Database Rules (".write": true).'
+                        : '— Dữ liệu đã lưu tạm vào trình duyệt.';
+                    showToast(`Lỗi lưu lên Firebase (${errDetail})`, 'error');
+                    return false;
+                }
+
+                isLiveFirebase = true;
+                setSyncStatusBadge('live', 'Đã đồng bộ Firebase (Live)');
+                updateTimestamp();
+                showToast(`Đã lưu trực tiếp lên Firebase (/${targetPath})`, 'success');
+                return true;
+            } catch (err) {
+                setSyncStatusBadge('error', 'Lỗi mạng khi ghi Firebase');
+                showToast(`Không thể gửi dữ liệu lên Firebase: ${err.message}`, 'error');
+                return false;
+            }
+        }
+
+        /**
+         * Đẩy toàn bộ cây JSON hiện tại ghi đè lên Firebase (PUT /.json)
+         */
+        async function pushFullDatabaseToFirebase() {
+            const baseUrl = getBaseFirebaseUrl();
+            if (!baseUrl) {
+                showToast('URL Firebase không hợp lệ!', 'error');
+                return;
+            }
+
+            setSyncStatusBadge('saving', 'Đang đẩy toàn bộ JSON...');
+            try {
+                const res = await fetch(`${baseUrl}/.json`, {
+                    method: 'PUT',
+                    cache: 'no-store',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(rootDatabaseJson)
+                });
+
+                if (!res.ok) {
+                    let errDetail = `${res.status} ${res.statusText}`;
+                    try {
+                        const errJson = await res.json();
+                        if (errJson && errJson.error) errDetail = `${res.status}: ${errJson.error}`;
+                    } catch (_) {}
+                    setSyncStatusBadge('error', `Lỗi Push (${res.status})`);
+                    showToast(`Firebase từ chối ghi đè toàn bộ: ${errDetail}`, 'error');
+                    return;
+                }
+
+                isLiveFirebase = true;
+                saveToLocalBackup();
+                setSyncStatusBadge('live', 'Đã đồng bộ Firebase (Live)');
+                updateTimestamp();
+                showToast('Đã đẩy toàn bộ cơ sở dữ liệu lên Firebase thành công!', 'success');
+            } catch (err) {
+                setSyncStatusBadge('error', 'Lỗi mạng khi Push');
+                showToast(`Lỗi đẩy dữ liệu lên Firebase: ${err.message}`, 'error');
+            }
+        }
+
+        // Modal Nạp JSON thủ công
+        function openPasteJsonModal() {
+            document.getElementById('paste-json-modal').classList.remove('hidden');
+        }
+        function closePasteJsonModal() {
+            document.getElementById('paste-json-modal').classList.add('hidden');
+        }
+        function handleJsonFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('paste-json-textarea').value = e.target.result;
+                showToast(`Đã đọc tệp ${file.name}`, 'info');
+            };
+            reader.readAsText(file);
+        }
+        function applyPastedJson() {
+            const rawText = document.getElementById('paste-json-textarea').value.trim();
+            const customName = document.getElementById('paste-json-table-name').value.trim() || 'custom_table';
+            if (!rawText) {
+                showToast('Vui lòng dán chuỗi JSON hợp lệ!', 'error');
+                return;
+            }
+            try {
+                const parsed = JSON.parse(rawText);
+                if (!parsed || typeof parsed !== 'object') throw new Error('JSON phải là Object hoặc Array');
+
+                const topKeys = Object.keys(parsed);
+                const hasKnownRootTables = topKeys.some(k => ['diemso', 'vong1_chung', 'vong1_rieng', 'vong2', 'vong3', 'vong4'].includes(k));
+                if (hasKnownRootTables) {
+                    rootDatabaseJson = parsed;
+                } else {
+                    rootDatabaseJson = { [customName]: parsed };
+                    currentSelection = { type: 'table', tableName: customName, subGroup: null };
+                }
+
+                saveToLocalBackup();
+                setSyncStatusBadge('local', 'JSON Nạp thủ công (Chưa Push)');
+                rebuildCurrentCatalog();
+                closePasteJsonModal();
+                showToast('Đã nạp JSON vào bảng! Bấm "Đẩy toàn bộ (Push)" nếu muốn ghi lên Firebase.', 'success');
+            } catch (err) {
+                showToast(`Lỗi cú pháp JSON: ${err.message}`, 'error');
+            }
+        }
+
+        // =========================================================================
+        // 7. RENDER SIDEBAR CÂY THƯ MỤC & TỔNG QUAN DATABASE
+        // =========================================================================
+        function renderSidebarTree() {
+            const listEl = document.getElementById('sidebar-table-list');
+            const filterKw = (document.getElementById('sidebar-table-search')?.value || '').toLowerCase().trim();
+            const names = Object.keys(tablesCatalog);
+            document.getElementById('sidebar-total-tables').textContent = names.length;
+
+            const filtered = names.filter(n => !filterKw || n.toLowerCase().includes(filterKw));
+            let html = '';
+
+            filtered.forEach(tName => {
+                const tbl = tablesCatalog[tName];
+                const isSelected = currentSelection.type === 'table' && currentSelection.tableName === tName && !currentSelection.subGroup;
+                const hasGroups = tbl.groups && tbl.groups.length > 0;
+                const isExp = expandedSidebarNodes.has(tName);
+
+                html += `
+                    <li>
+                        <div class="flex items-center space-x-1">
+                            ${hasGroups ? `
+                                <button onclick="toggleSidebarNode('${tName}')" class="text-slate-400 hover:text-slate-700 w-4 h-6 flex items-center justify-center cursor-pointer">
+                                    <i class="fa-solid ${isExp ? 'fa-caret-down' : 'fa-caret-right'} text-xs"></i>
+                                </button>
+                            ` : `<span class="w-4"></span>`}
+
+                            <button onclick="selectTable('${tName}', null)"
+                                class="flex-1 flex items-center justify-between px-2 py-1.5 rounded-md text-left transition cursor-pointer ${isSelected ? 'bg-amber-50 text-amber-950 font-bold border border-amber-300 shadow-2xs' : 'hover:bg-slate-100 text-slate-700'}">
+                                <span class="flex items-center space-x-1.5 truncate">
+                                    <i class="fa-solid fa-table text-sky-600 text-xs shrink-0"></i>
+                                    <span class="truncate font-mono text-xs sm:text-[13px]">${escapeHtml(tName)}</span>
+                                </span>
+                                <span class="flex items-center space-x-1 shrink-0 ml-1">
+                                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-mono font-semibold">${tbl.badge}</span>
+                                    <span class="text-[10px] bg-sky-100 text-sky-800 px-1.5 py-0.2 rounded-full font-mono font-bold">${tbl.rows.length}</span>
+                                </span>
+                            </button>
+                        </div>
+                `;
+
+                if (hasGroups && isExp) {
+                    html += `<ul class="mt-1 pl-5 space-y-0.5 border-l border-purple-200 ml-3.5">`;
+                    tbl.groups.forEach(grp => {
+                        const isSub = currentSelection.type === 'table' && currentSelection.tableName === tName && currentSelection.subGroup === grp;
+                        const cnt = tbl.rows.filter(r => r._group === grp).length;
+                        html += `
+                            <li>
+                                <button onclick="selectTable('${tName}', '${grp}')"
+                                    class="w-full flex items-center justify-between px-2 py-1 rounded text-xs transition cursor-pointer ${isSub ? 'bg-purple-100 text-purple-900 font-semibold border border-purple-300' : 'text-slate-600 hover:bg-slate-100'}">
+                                    <span class="flex items-center space-x-1.5 truncate font-mono">
+                                        <i class="fa-solid fa-folder text-purple-500 text-[10px]"></i>
+                                        <span>${escapeHtml(grp)}</span>
+                                    </span>
+                                    <span class="text-[10px] text-slate-500 font-mono">${cnt}</span>
+                                </button>
+                            </li>
+                        `;
+                    });
+                    html += `</ul>`;
+                }
+
+                html += `</li>`;
+            });
+
+            listEl.innerHTML = html || `<li class="text-xs text-slate-400 italic px-2 py-2">Không có bảng nào</li>`;
+        }
+
+        function toggleSidebarNode(tName) {
+            if (expandedSidebarNodes.has(tName)) expandedSidebarNodes.delete(tName);
+            else expandedSidebarNodes.add(tName);
+            renderSidebarTree();
+        }
+
+        function selectDatabaseOverview(autoSwitch = true) {
+            currentSelection = { type: 'overview', tableName: null, subGroup: null };
+            const dbName = document.getElementById('sidebar-db-name').textContent;
+            document.getElementById('breadcrumb-table').innerHTML = `<i class="fa-solid fa-layer-group mr-1.5"></i>Tổng quan Database`;
+            document.getElementById('sidebar-root-btn').className = 'w-full flex items-center justify-between font-semibold text-sky-900 py-1.5 px-2 rounded-md bg-sky-100 border border-sky-300 text-left cursor-pointer';
+
+            const totalRows = Object.values(tablesCatalog).reduce((s, t) => s + t.rows.length, 0);
+            document.getElementById('query-status-text').textContent = `Cơ sở dữ liệu '${dbName}' có ${Object.keys(tablesCatalog).length} bảng, tổng cộng ${totalRows} bản ghi.`;
+            document.getElementById('sql-preview-bar').innerHTML = `<span class="text-blue-700 font-bold">SHOW TABLE STATUS FROM</span> \`${dbName}\`;`;
+
+            renderSidebarTree();
+            if (autoSwitch) switchTab('overview');
+        }
+
+        function renderDatabaseOverview() {
+            const tbody = document.getElementById('overview-tables-body');
+            const names = Object.keys(tablesCatalog);
+            let html = '';
+
+            names.forEach((tName, idx) => {
+                const tbl = tablesCatalog[tName];
+                const sizeBytes = new Blob([JSON.stringify(tbl.rows)]).size;
+                const sizeText = sizeBytes > 1024 ? `${(sizeBytes / 1024).toFixed(2)} KB` : `${sizeBytes} B`;
+                const colsPreview = tbl.columns.slice(0, 6).map(c => `\`${c}\``).join(', ') + (tbl.columns.length > 6 ? '...' : '');
+
+                html += `
+                    <tr class="${idx % 2 === 0 ? 'pma-row-odd' : 'pma-row-even'}">
+                        <td class="py-2 px-3 border-r border-slate-200 font-bold text-slate-900">
+                            <button onclick="selectTable('${tName}', null)" class="flex items-center space-x-2 hover:text-sky-600 cursor-pointer">
+                                <i class="fa-solid fa-table text-sky-600"></i>
+                                <span>${escapeHtml(tName)}</span>
+                            </button>
+                        </td>
+                        <td class="py-2 px-3 border-r border-slate-200 font-sans whitespace-nowrap">
+                            <button onclick="selectTable('${tName}', null)" class="text-sky-600 hover:underline font-medium mr-2 cursor-pointer">Duyệt</button>
+                            <span class="text-slate-300">|</span>
+                            <button onclick="selectTable('${tName}', null); switchTab('structure');" class="text-amber-600 hover:underline font-medium ml-2 cursor-pointer">Cấu trúc</button>
+                        </td>
+                        <td class="py-2 px-3 border-r border-slate-200">
+                            <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-[11px] font-semibold">${tbl.badge}</span>
+                        </td>
+                        <td class="py-2 px-3 border-r border-slate-200 text-right font-bold text-blue-700">${tbl.rows.length}</td>
+                        <td class="py-2 px-3 border-r border-slate-200 text-slate-600">${escapeHtml(colsPreview)}</td>
+                        <td class="py-2 px-3 text-right text-slate-500">${sizeText}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        // =========================================================================
+        // 8. CHỌN BẢNG & RENDER GIAO DIỆN PHPMYADMIN
+        // =========================================================================
+        function selectTable(tableName, subGroup = null, autoSwitchBrowse = true) {
+            const baseTbl = tablesCatalog[tableName];
+            if (!baseTbl) return;
+
+            currentSelection = { type: 'table', tableName, subGroup };
+            selectedRowUids.clear();
+            document.getElementById('sidebar-root-btn').className = 'w-full flex items-center justify-between font-semibold text-slate-700 py-1.5 px-2 rounded-md bg-slate-50 hover:bg-slate-100 text-left cursor-pointer';
+
+            if (mappingMode === 'raw_tree' && subGroup) {
+                activeTable = buildSingleRawNodeTable(tableName, rootDatabaseJson[tableName], subGroup);
+            } else {
+                activeTable = baseTbl;
+            }
+
+            sortConfig = { key: null, direction: 'asc' };
+
+            document.getElementById('breadcrumb-table').innerHTML = `<i class="fa-solid fa-table mr-1.5"></i>${escapeHtml(activeTable.name)}`;
+            document.getElementById('export-current-table-name').textContent = activeTable.name;
+
+            const sortSelect = document.getElementById('sort-by-key-select');
+            sortSelect.innerHTML = `<option value="NONE">Không</option>` +
+                activeTable.columns.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)} (ASC)</option>`).join('');
+
+            const filterWrap = document.getElementById('group-filter-wrapper');
+            const filterSelect = document.getElementById('group-filter-select');
+            if (activeTable.filterColumn && !subGroup) {
+                const uniqueVals = [...new Set(activeTable.rows.map(r => r[activeTable.filterColumn]).filter(v => v !== '' && v !== null))];
+                if (uniqueVals.length > 1) {
+                    filterWrap.classList.remove('hidden');
+                    filterSelect.innerHTML = `<option value="ALL">Tất cả (${uniqueVals.length})</option>` +
+                        uniqueVals.map(v => `<option value="${escapeHtml(String(v))}">${escapeHtml(String(v))}</option>`).join('');
+                } else {
+                    filterWrap.classList.add('hidden');
+                    filterSelect.value = 'ALL';
+                }
+            } else {
+                filterWrap.classList.add('hidden');
+                filterSelect.value = 'ALL';
+            }
+
+            const rawSwitcher = document.getElementById('raw-grouped-switcher');
+            if (mappingMode === 'raw_tree' && (activeTable.schemaType === 'grouped_array' || activeTable.schemaType === 'array_1indexed')) {
+                rawSwitcher.classList.remove('hidden');
+            } else {
+                rawSwitcher.classList.add('hidden');
+            }
+
+            renderSidebarTree();
+            renderTable();
+            renderStructureTab();
+            renderSqlAndJsonExport();
+
+            if (autoSwitchBrowse) switchTab('browse');
+        }
+
+        function onRowsLimitChange() {
+            const val = document.getElementById('rows-limit-select').value;
+            document.getElementById('show-all-rows').checked = (val === 'ALL');
+            renderTable();
+        }
+
+        function onSortKeySelectChange() {
+            const val = document.getElementById('sort-by-key-select').value;
+            sortConfig = val === 'NONE' ? { key: null, direction: 'asc' } : { key: val, direction: 'asc' };
+            renderTable();
+        }
+
+        function handleHeaderSort(colKey) {
+            if (sortConfig.key === colKey) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.key = colKey;
+                sortConfig.direction = 'asc';
+            }
+            const sortSelect = document.getElementById('sort-by-key-select');
+            if (sortSelect) sortSelect.value = colKey;
+            renderTable();
+        }
+
+        function getFilteredAndSortedRows() {
+            if (!activeTable) return [];
+            const searchKw = (document.getElementById('table-search')?.value || '').toLowerCase().trim();
+            const filterVal = document.getElementById('group-filter-select')?.value || 'ALL';
+            const showAll = document.getElementById('show-all-rows')?.checked ?? true;
+            const limitRaw = document.getElementById('rows-limit-select')?.value || '25';
+            const limit = limitRaw === 'ALL' ? Infinity : Number(limitRaw);
+
+            let rows = activeTable.rows.filter(r => {
+                if (activeTable.filterColumn && filterVal !== 'ALL') {
+                    if (String(r[activeTable.filterColumn]) !== filterVal) return false;
+                }
+                if (!searchKw) return true;
+                return activeTable.columns.some(col => {
+                    const v = r[col];
+                    const str = v === null || v === undefined ? 'null' : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+                    return str.toLowerCase().includes(searchKw);
+                });
+            });
+
+            if (sortConfig.key) {
+                rows = [...rows].sort((a, b) => {
+                    const vA = a[sortConfig.key] ?? '';
+                    const vB = b[sortConfig.key] ?? '';
+                    if (typeof vA === 'number' && typeof vB === 'number') {
+                        return sortConfig.direction === 'asc' ? vA - vB : vB - vA;
+                    }
+                    const sA = String(vA).toLowerCase();
+                    const sB = String(vB).toLowerCase();
+                    if (sA < sB) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (sA > sB) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            if (!showAll && rows.length > limit) {
+                rows = rows.slice(0, limit);
+            }
+            return rows;
+        }
+
+        function renderTable() {
+            if (!activeTable) return;
+            const rows = getFilteredAndSortedRows();
+            const flatContainer = document.getElementById('flat-table-container');
+            const groupedContainer = document.getElementById('grouped-tables-container');
+            const emptyState = document.getElementById('empty-state');
+
+            const filterVal = document.getElementById('group-filter-select')?.value || 'ALL';
+            const whereSql = (activeTable.filterColumn && filterVal !== 'ALL') ? ` <span class="text-blue-700 font-bold">WHERE</span> \`${activeTable.filterColumn}\` = '${escapeHtml(filterVal)}'` : '';
+            const orderSql = sortConfig.key ? ` <span class="text-blue-700 font-bold">ORDER BY</span> \`${escapeHtml(sortConfig.key)}\` <span class="text-blue-700 font-bold">${sortConfig.direction.toUpperCase()}</span>` : '';
+            document.getElementById('sql-preview-bar').innerHTML =
+                `<span class="text-blue-700 font-bold">SELECT</span> * <span class="text-blue-700 font-bold">FROM</span> \`${escapeHtml(activeTable.name)}\`${whereSql}${orderSql};`;
+
+            const maxIdx = rows.length > 0 ? rows.length - 1 : 0;
+            document.getElementById('query-status-text').textContent =
+                `Hiển thị hàng 0 - ${maxIdx} (Tổng cộng ${rows.length} / ${activeTable.rows.length} bản ghi trong \`${activeTable.name}\`, Truy vấn mất 0.0006 giây.)`;
+
+            if (rows.length === 0 && activeTable.rows.length > 0) {
+                flatContainer.classList.add('hidden');
+                groupedContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            if (mappingMode === 'raw_tree' && rawLayoutMode === 'grouped' && (activeTable.schemaType === 'grouped_array' || activeTable.schemaType === 'array_1indexed')) {
+                flatContainer.classList.add('hidden');
+                groupedContainer.classList.remove('hidden');
+                renderRawGroupedPackages(rows);
+                return;
+            }
+
+            groupedContainer.classList.add('hidden');
+            flatContainer.classList.remove('hidden');
+            renderPhpMyAdminFlatTable(rows);
+        }
+
+        function renderPhpMyAdminFlatTable(rows) {
+            const theadRow = document.getElementById('table-head-row');
+            const tbody = document.getElementById('table-body');
+            const cols = activeTable.columns;
+
+            let headHtml = `
+                <th class="py-2 px-2 border-r border-slate-300 w-8 text-center">
+                    <input type="checkbox" id="check-all-top" onchange="toggleSelectAllRows(this.checked)" class="rounded text-sky-600 focus:ring-0" title="Chọn tất cả">
+                </th>
+                <th class="py-2 px-2.5 border-r border-slate-300 w-40 text-center font-semibold text-slate-600 whitespace-nowrap">
+                    ← T → &nbsp;Thao tác
+                </th>
+            `;
+
+            cols.forEach(col => {
+                const isSorted = sortConfig.key === col;
+                const sortIcon = !isSorted
+                    ? `<i class="fa-solid fa-sort text-slate-300 text-[10px]"></i>`
+                    : (sortConfig.direction === 'asc'
+                        ? `<i class="fa-solid fa-sort-up text-sky-600 text-xs"></i>`
+                        : `<i class="fa-solid fa-sort-down text-sky-600 text-xs"></i>`);
+                const isPk = col === activeTable.primaryKey;
+
+                headHtml += `
+                    <th onclick="handleHeaderSort('${escapeHtml(col)}')" class="py-2 px-3 border-r border-slate-300 cursor-pointer hover:bg-slate-200/80 transition whitespace-nowrap">
+                        <div class="flex items-center justify-between space-x-2">
+                            <span class="font-bold text-sky-900 underline decoration-sky-900/30 underline-offset-2 flex items-center">
+                                ${isPk ? '<i class="fa-solid fa-key text-amber-500 mr-1 text-[10px]" title="Primary Key (PRI)"></i>' : ''}
+                                ${escapeHtml(col)}
+                            </span>
+                            ${sortIcon}
+                        </div>
+                    </th>
+                `;
+            });
+            theadRow.innerHTML = headHtml;
+
+            let bodyHtml = '';
+            rows.forEach((row, idx) => {
+                const isChecked = selectedRowUids.has(row._uid);
+                const rowClass = isChecked ? 'pma-row-selected' : (idx % 2 === 0 ? 'pma-row-odd' : 'pma-row-even');
+                const safeUid = escapeHtml(row._uid);
+
+                bodyHtml += `
+                    <tr class="${rowClass} transition">
+                        <td class="py-1.5 px-2 border-r border-slate-200 text-center">
+                            <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleSingleRowSelect('${safeUid}', this.checked)" class="rounded text-sky-600 focus:ring-0">
+                        </td>
+                        <td class="py-1.5 px-2.5 border-r border-slate-200 text-center whitespace-nowrap font-sans text-xs">
+                            <div class="inline-flex items-center space-x-2">
+                                <button type="button" onclick="openEditModal('${safeUid}')" class="text-sky-700 hover:underline inline-flex items-center space-x-1 cursor-pointer" title="Sửa toàn bộ dòng">
+                                    <i class="fa-solid fa-pen text-amber-500 text-[11px]"></i>
+                                    <span>Sửa</span>
+                                </button>
+                                <button type="button" onclick="duplicateRow('${safeUid}')" class="text-sky-700 hover:underline inline-flex items-center space-x-1 cursor-pointer" title="Chép (Duplicate) dòng này">
+                                    <i class="fa-solid fa-clone text-indigo-500 text-[11px]"></i>
+                                    <span>Chép</span>
+                                </button>
+                                <button type="button" onclick="deleteSingleRow('${safeUid}')" class="text-red-600 hover:underline inline-flex items-center space-x-1 cursor-pointer" title="Xóa bỏ dòng này">
+                                    <i class="fa-solid fa-circle-xmark text-red-500 text-[11px]"></i>
+                                    <span>Xóa bỏ</span>
+                                </button>
+                            </div>
+                        </td>
+                `;
+
+                cols.forEach(col => {
+                    bodyHtml += renderInteractiveCell(row._uid, col, row[col]);
+                });
+
+                bodyHtml += `</tr>`;
+            });
+
+            // Hàng thêm nhanh cuối bảng (Quick Inline Insert Row)
+            bodyHtml += `
+                <tr class="bg-emerald-50/80 border-t-2 border-emerald-300">
+                    <td class="py-2 px-2 border-r border-slate-200 text-center text-emerald-700 font-bold">
+                        <i class="fa-solid fa-plus"></i>
+                    </td>
+                    <td class="py-2 px-2.5 border-r border-slate-200 text-center whitespace-nowrap font-sans">
+                        <button type="button" onclick="saveQuickInlineRow()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-2.5 py-1 rounded shadow-2xs inline-flex items-center space-x-1 transition cursor-pointer">
+                            <i class="fa-solid fa-check"></i>
+                            <span>Thêm nhanh</span>
+                        </button>
+                    </td>
+            `;
+
+            const sampleRow = rows[rows.length - 1] || {};
+            cols.forEach(col => {
+                let defaultVal = '';
+                if (col === 'idgoi') {
+                    defaultVal = sampleRow.idgoi || 'goi1';
+                } else if (col === 'sttcau') {
+                    const maxStt = rows.filter(r => !r.idgoi || r.idgoi === (sampleRow.idgoi || 'goi1')).reduce((m, r) => Math.max(m, Number(r.sttcau) || 0), 0);
+                    defaultVal = maxStt + 1;
+                } else if (col === 'id' && activeTable.name === 'diemso') {
+                    defaultVal = `doi${rows.length + 1}`;
+                } else if (col === 'id' && activeTable.name === 'vong4') {
+                    defaultVal = `20_${rows.length + 1}`;
+                } else if (col === 'id') {
+                    defaultVal = rows.length + 1;
+                } else if (activeTable.stateColumns && activeTable.stateColumns.includes(col)) {
+                    defaultVal = sampleRow[col] ?? '';
+                }
+
+                bodyHtml += `
+                    <td class="py-1.5 px-2 border-r border-slate-200">
+                        <input type="text" data-quick-col="${escapeHtml(col)}" value="${escapeHtml(String(defaultVal))}" placeholder="${escapeHtml(col)}..."
+                            onkeydown="if(event.key==='Enter'){ event.preventDefault(); saveQuickInlineRow(); }"
+                            class="quick-add-input w-full min-w-[75px] px-2 py-1 text-xs font-mono bg-white border border-emerald-300 rounded focus:outline-none focus:border-emerald-600">
+                    </td>
+                `;
+            });
+            bodyHtml += `</tr>`;
+
+            tbody.innerHTML = bodyHtml;
+            updateSelectedCounterUI();
+        }
+
+        function renderInteractiveCell(rowUid, col, val) {
+            const safeUid = escapeHtml(rowUid);
+            const safeCol = escapeHtml(col);
+            const dblAttr = `ondblclick="startInlineCellEdit(this, '${safeUid}', '${safeCol}')" title="Nhấp đúp để sửa trực tiếp ô \`${safeCol}\`"`;
+
+            if (val === null || val === undefined || val === '') {
+                return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 whitespace-nowrap">
+                    <span class="text-slate-400 italic text-xs">NULL</span>
+                </td>`;
+            }
+
+            if (col === 'sttcau' || col === 'index' || col === 'diem' || col === 'mucdiem' || col === 'sokytu' || col === 'thoigian_giay') {
+                return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 text-right font-semibold text-slate-900 whitespace-nowrap">${escapeHtml(String(val))}</td>`;
+            }
+
+            if (col === 'thoigian') {
+                return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 text-right text-slate-800 whitespace-nowrap">${escapeHtml(String(val))}</td>`;
+            }
+
+            if (typeof val === 'boolean') {
+                return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 font-semibold whitespace-nowrap ${val ? 'text-emerald-700' : 'text-rose-700'}">${val ? 'true' : 'false'}</td>`;
+            }
+
+            const strVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+
+            if ((col === 'dananthisinh' || col === 'goiy' || col === 'chuong_cnv' || strVal.startsWith('{') || strVal.startsWith('[')) && strVal.length > 38) {
+                return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 text-slate-800 whitespace-nowrap max-w-[260px]">
+                    <div class="flex items-center justify-between space-x-1.5">
+                        <span class="truncate">${escapeHtml(strVal)}</span>
+                        <button type="button" onclick="event.stopPropagation(); inspectCellJson('${safeUid}', '${safeCol}')" class="text-[10px] bg-slate-200 hover:bg-sky-200 text-slate-700 px-1.5 py-0.5 rounded shrink-0 cursor-pointer" title="Xem chi tiết JSON">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </td>`;
+            }
+
+            if (col === 'cauhoi') {
+                return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 text-slate-900 max-w-md truncate" title="${escapeHtml(strVal)}">${escapeHtml(strVal)}</td>`;
+            }
+
+            return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 text-slate-800 max-w-xs truncate" title="${escapeHtml(strVal)}">${escapeHtml(strVal)}</td>`;
+        }
+
+        // =========================================================================
+        // 9. SỬA TRỰC TIẾP TRÊN Ô (DOUBLE-CLICK INLINE EDIT) & THÊM NHANH
+        // =========================================================================
+        function startInlineCellEdit(tdEl, rowUid, col) {
+            if (tdEl.querySelector('input, textarea')) return;
+            const row = activeTable.rows.find(r => r._uid === rowUid);
+            if (!row) return;
+
+            const currentVal = row[col] === null || row[col] === undefined ? '' : (typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col]));
+            const originalHtml = tdEl.innerHTML;
+
+            const isLong = currentVal.length > 50 || col === 'cauhoi' || col === 'dananthisinh';
+            tdEl.innerHTML = '';
+
+            const editor = document.createElement(isLong ? 'textarea' : 'input');
+            if (!isLong) editor.type = 'text';
+            else editor.rows = 2;
+            editor.value = currentVal;
+            editor.className = 'w-full min-w-[160px] px-2 py-1 text-xs font-mono bg-amber-50 border-2 border-sky-500 rounded focus:outline-none text-slate-900';
+
+            let committed = false;
+            const commit = async () => {
+                if (committed) return;
+                committed = true;
+                const newVal = parseSmartValue(editor.value, typeof row[col], col);
+                await applyCellOrRowUpdate(row, { [col]: newVal });
+            };
+            const cancel = () => {
+                if (committed) return;
+                committed = true;
+                tdEl.innerHTML = originalHtml;
+            };
+
+            editor.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    commit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancel();
+                }
+            });
+            editor.addEventListener('blur', commit);
+
+            tdEl.appendChild(editor);
+            editor.focus();
+            editor.select();
+        }
+
+        function parseSmartValue(str, originalType = 'string', colName = '') {
+            if (str === null || str === undefined) return '';
+            const rawStr = String(str);
+            const trimmed = rawStr.trim();
+
+            if (trimmed === '' || trimmed.toUpperCase() === 'NULL') return '';
+
+            // Các cột định danh hoặc văn bản luôn giữ kiểu chuỗi để tránh biến dạng (vd: "1", "20_1", "01")
+            const forceStringCols = ['cauhoihientai', 'doihientai', 'goihientai', 'idgoi', 'id', 'cauhoi', 'danan', 'dapan', 'linhvuc', 'tukhoa', 'url', 'trangthai', 'statusdapan', 'cauhoiopen', 'goi_da_chon'];
+            if (forceStringCols.includes(colName)) {
+                return rawStr;
+            }
+
+            if (originalType === 'boolean' || trimmed.toLowerCase() === 'true' || trimmed.toLowerCase() === 'false') {
+                return trimmed.toLowerCase() === 'true';
+            }
+
+            const numCandidate = Number(trimmed);
+            if (
+                (originalType === 'number' || /^-?\d+(\.\d+)?$/.test(trimmed)) &&
+                !Number.isNaN(numCandidate) &&
+                Number.isFinite(numCandidate)
+            ) {
+                return numCandidate;
+            }
+
+            return rawStr;
+        }
+
+        async function saveQuickInlineRow() {
+            const inputs = document.querySelectorAll('.quick-add-input');
+            const newRowObj = {};
+            inputs.forEach(inp => {
+                const col = inp.getAttribute('data-quick-col');
+                newRowObj[col] = parseSmartValue(inp.value, 'string', col);
+            });
+
+            const hasContent = Object.values(newRowObj).some(v => v !== '' && v !== 0);
+            if (!hasContent) {
+                showToast('Vui lòng nhập nội dung vào hàng thêm nhanh trước khi lưu!', 'error');
+                return;
+            }
+
+            await insertNewRowIntoSourceJson(newRowObj);
+        }
+
+        // =========================================================================
+        // 10. ĐỒNG BỘ NGƯỢC LẠI JSON GỐC & GỌI PUT/PATCH LÊN FIREBASE THỰC TẾ
+        // =========================================================================
+        async function applyCellOrRowUpdate(row, updatedFields) {
+            const safeFields = {};
+            for (const [k, v] of Object.entries(updatedFields)) {
+                if (typeof v === 'number' && Number.isNaN(v)) {
+                    safeFields[k] = '';
+                } else if (v === undefined) {
+                    safeFields[k] = '';
+                } else {
+                    safeFields[k] = v;
+                }
+            }
+
+            Object.assign(row, safeFields);
+
+            // Xác định danh sách các đường dẫn node cần đồng bộ lên Firebase
+            const pathsToSync = syncRowBackToRootJson(row, safeFields);
+
+            // Lưu từng đường dẫn đã bị thay đổi lên Firebase (PUT)
+            for (const p of pathsToSync) {
+                const nodeData = getByPath(rootDatabaseJson, p);
+                if (nodeData !== undefined) {
+                    await syncPathToFirebase(p, nodeData, 'PUT');
+                }
+            }
+
+            rebuildCurrentCatalog();
+        }
+
+        function syncRowBackToRootJson(row, updatedFields = {}) {
+            const tblName = activeTable.name;
+            const changedPaths = new Set();
+            const meta = row._meta || {};
+
+            if (mappingMode === 'raw_tree') {
+                const targetPath = meta.firebasePath || row._targetPath;
+                if (targetPath) {
+                    const cleanObj = {};
+                    activeTable.columns.forEach(c => {
+                        if (c !== activeTable.primaryKey && c !== 'group') {
+                            cleanObj[c] = row[c] === undefined ? '' : row[c];
+                        }
+                    });
+                    const payload = activeTable.schemaType === 'key_value' ? (row.value ?? '') : unflattenObject(cleanObj);
+                    setByPath(rootDatabaseJson, targetPath, payload);
+                    changedPaths.add(targetPath);
+                }
+                return Array.from(changedPaths);
+            }
+
+            // Đồng bộ cho Game Schema chuẩn phpMyAdmin
+            if (tblName === 'diemso') {
+                const safeId = String(meta.rowId ?? row.id ?? '').trim();
+                if (!safeId || safeId === 'NaN' || safeId === 'null') return [];
+                const path = `diemso/${safeId}`;
+                const diemVal = Number(row.diem);
+                setByPath(rootDatabaseJson, path, {
+                    diem: Number.isFinite(diemVal) ? diemVal : 0,
+                    tendoi: row.tendoi ?? ''
+                });
+                changedPaths.add(path);
+            } else if (tblName === 'vong1_chung' || tblName === 'vong1_rieng' || tblName === 'vong1_rieng_sub') {
+                const basePath = tblName === 'vong1_rieng_sub' ? 'vong1_rieng/vong1_rieng' : tblName;
+                const isStateOnly = meta.rowType === 'vong1_state_only';
+                const safeGoi = String(meta.groupKey ?? row.idgoi ?? 'goi1').trim();
+                const safeStt = Number(meta.rowId === '_state' ? row.sttcau : (meta.rowId ?? row.sttcau));
+
+                if (!isStateOnly || (Number.isInteger(safeStt) && safeStt >= 1 && (row.cauhoi || row.danan))) {
+                    if (safeGoi && Number.isInteger(safeStt) && safeStt >= 1) {
+                        const qPath = `${basePath}/question_bank/${safeGoi}/${safeStt}`;
+                        const qObj = { cauhoi: row.cauhoi ?? '', dapan: row.danan ?? '' };
+                        if (row.linhvuc !== undefined && row.linhvuc !== '') qObj.linhvuc = row.linhvuc;
+                        setByPath(rootDatabaseJson, qPath, qObj);
+                        changedPaths.add(qPath);
+                    }
+                }
+
+                // Cập nhật match_state nếu có thay đổi cột trạng thái
+                let stateChanged = false;
+                if ('cauhoihientai' in updatedFields) {
+                    setByPath(rootDatabaseJson, `${basePath}/match_state/cauhoihientai`, String(row.cauhoihientai ?? ''));
+                    stateChanged = true;
+                }
+                if ('cauhoiopen' in updatedFields) {
+                    setByPath(rootDatabaseJson, `${basePath}/match_state/cauhoiopen`, String(row.cauhoiopen ?? ''));
+                    stateChanged = true;
+                }
+                if ('thoigian' in updatedFields) {
+                    const tg = Number(row.thoigian);
+                    setByPath(rootDatabaseJson, `${basePath}/match_state/thoigian`, Number.isFinite(tg) ? tg : 0);
+                    stateChanged = true;
+                }
+                if ('doihientai' in updatedFields) {
+                    const parts = String(row.doihientai ?? '').split('|');
+                    setByPath(rootDatabaseJson, `${basePath}/match_state/doihientai`, parts[0] || '');
+                    if (parts[1]) setByPath(rootDatabaseJson, `${basePath}/match_state/goihientai`, parts[1].toLowerCase());
+                    stateChanged = true;
+                }
+                if ('dananthisinh' in updatedFields && row.dananthisinh) {
+                    try {
+                        const parsed = JSON.parse(row.dananthisinh);
+                        if (parsed._config) {
+                            setByPath(rootDatabaseJson, `${basePath}/match_state/config`, {
+                                show: parsed._config.show === 'true' || parsed._config.show === true,
+                                ketvong: String(parsed._config.ketvong).toLowerCase() === 'true'
+                            });
+                        }
+                        if (parsed.goidadung) {
+                            setByPath(rootDatabaseJson, `${basePath}/match_state/goidadung`, parsed.goidadung);
+                        }
+                        stateChanged = true;
+                    } catch (_) {}
+                }
+                if (stateChanged) changedPaths.add(`${basePath}/match_state`);
+            } else if (tblName === 'vong2') {
+                const safeStt = Number(meta.rowId ?? row.sttcau ?? row.id);
+                if (!Number.isInteger(safeStt) || safeStt < 1) return [];
+                const qPath = `vong2/question_bank/hangngang/${safeStt}`;
+                const skt = Number(row.sokytu);
+                setByPath(rootDatabaseJson, qPath, {
+                    cauhoi: row.cauhoi ?? '',
+                    dapan: row.danan ?? '',
+                    sokytu: Number.isFinite(skt) && skt > 0 ? skt : String(row.danan || '').length
+                });
+                changedPaths.add(qPath);
+
+                if ('statusdapan' in updatedFields) {
+                    setByPath(rootDatabaseJson, `vong2/match_state/trangthai_hangngang/${safeStt}`, row.statusdapan ?? 'CHUA_MO');
+                    changedPaths.add(`vong2/match_state`);
+                }
+                if ('cauhoihientai' in updatedFields) {
+                    setByPath(rootDatabaseJson, `vong2/match_state/cauhoihientai`, String(row.cauhoihientai ?? ''));
+                    changedPaths.add(`vong2/match_state`);
+                }
+                if ('tukhoa' in updatedFields) {
+                    setByPath(rootDatabaseJson, `vong2/question_bank/tukhoa`, row.tukhoa ?? '');
+                    changedPaths.add(`vong2/question_bank/tukhoa`);
+                }
+            } else if (tblName === 'vong3') {
+                const safeStt = Number(meta.rowId ?? row.sttcau ?? row.id);
+                if (!Number.isInteger(safeStt) || safeStt < 1) return [];
+                const qPath = `vong3/question_bank/${safeStt}`;
+                let parsedGoiY = undefined;
+                if (row.goiy) {
+                    try { parsedGoiY = typeof row.goiy === 'string' ? JSON.parse(row.goiy) : row.goiy; } catch (_) {}
+                }
+                const tgg = Number(row.thoigian_giay);
+                const qObj = {
+                    cauhoi: row.cauhoi ?? '',
+                    dapan: row.danan ?? '',
+                    loai: '',
+                    thoigian_giay: Number.isFinite(tgg) && tgg > 0 ? tgg : 30,
+                    url: row.url ?? ''
+                };
+                if (parsedGoiY) qObj.goiy = parsedGoiY;
+                setByPath(rootDatabaseJson, qPath, qObj);
+                changedPaths.add(qPath);
+
+                if ('cauhoihientai' in updatedFields) {
+                    setByPath(rootDatabaseJson, `vong3/match_state/cauhoihientai`, String(row.cauhoihientai ?? ''));
+                    changedPaths.add(`vong3/match_state`);
+                }
+                if ('thoigian' in updatedFields) {
+                    const tg = Number(row.thoigian);
+                    setByPath(rootDatabaseJson, `vong3/match_state/thoigian`, Number.isFinite(tg) ? tg : 0);
+                    changedPaths.add(`vong3/match_state`);
+                }
+            } else if (tblName === 'vong4') {
+                const safeId = String(meta.rowId ?? row.id ?? '').trim();
+                if (!safeId || safeId === 'NaN' || safeId === 'null') return [];
+                const qPath = `vong4/question_bank/${safeId}`;
+                const md = Number(row.mucdiem);
+                setByPath(rootDatabaseJson, qPath, {
+                    cauhoi: row.cauhoi ?? '',
+                    dapan: row.danan ?? '',
+                    mucdiem: Number.isFinite(md) ? md : 20,
+                    url: row.url ?? ''
+                });
+                changedPaths.add(qPath);
+
+                let msChanged = false;
+                if ('cauhoihientai' in updatedFields) { setByPath(rootDatabaseJson, `vong4/match_state/cauhoihientai`, String(row.cauhoihientai ?? '')); msChanged = true; }
+                if ('doihientai' in updatedFields) { setByPath(rootDatabaseJson, `vong4/match_state/doihientai`, row.doihientai ?? ''); msChanged = true; }
+                if ('goi_da_chon' in updatedFields) { setByPath(rootDatabaseJson, `vong4/match_state/goi_da_chon`, row.goi_da_chon ?? ''); msChanged = true; }
+                if ('ngoisao' in updatedFields) { setByPath(rootDatabaseJson, `vong4/match_state/ngoisao`, Boolean(row.ngoisao)); msChanged = true; }
+                if ('trangthai' in updatedFields) { setByPath(rootDatabaseJson, `vong4/match_state/trangthai`, row.trangthai ?? ''); msChanged = true; }
+                if ('thoigian' in updatedFields) {
+                    const tg = Number(row.thoigian);
+                    setByPath(rootDatabaseJson, `vong4/match_state/thoigian`, Number.isFinite(tg) ? tg : 0);
+                    msChanged = true;
+                }
+                if (msChanged) changedPaths.add(`vong4/match_state`);
+            }
+
+            return Array.from(changedPaths);
+        }
+
+        async function insertNewRowIntoSourceJson(newRowObj) {
+            const tblName = activeTable.name;
+            let syncTargetPath = '';
+
+            if (mappingMode === 'game_schema') {
+                if (tblName === 'diemso') {
+                    const id = String(newRowObj.id || `doi${activeTable.rows.length + 1}`);
+                    syncTargetPath = `diemso/${id}`;
+                    setByPath(rootDatabaseJson, syncTargetPath, { diem: Number(newRowObj.diem) || 0, tendoi: newRowObj.tendoi || id });
+                } else if (tblName === 'vong1_chung' || tblName === 'vong1_rieng' || tblName === 'vong1_rieng_sub') {
+                    const basePath = tblName === 'vong1_rieng_sub' ? 'vong1_rieng/vong1_rieng' : tblName;
+                    const goi = String(newRowObj.idgoi || 'goi1');
+                    const arr = getByPath(rootDatabaseJson, `${basePath}/question_bank/${goi}`) || [null];
+                    const idx = Number(newRowObj.sttcau) || arr.length;
+                    const qObj = { cauhoi: newRowObj.cauhoi || '', dapan: newRowObj.danan || '' };
+                    if (tblName === 'vong1_rieng' || newRowObj.linhvuc) qObj.linhvuc = newRowObj.linhvuc || 'Tổng hợp';
+                    arr[idx] = qObj;
+                    setByPath(rootDatabaseJson, `${basePath}/question_bank/${goi}`, arr);
+                    syncTargetPath = `${basePath}/question_bank/${goi}/${idx}`;
+                } else if (tblName === 'vong2') {
+                    const arr = getByPath(rootDatabaseJson, `vong2/question_bank/hangngang`) || [null];
+                    const idx = Number(newRowObj.sttcau || newRowObj.id) || arr.length;
+                    arr[idx] = { cauhoi: newRowObj.cauhoi || '', dapan: newRowObj.danan || '', sokytu: Number(newRowObj.sokytu) || String(newRowObj.danan || '').length };
+                    setByPath(rootDatabaseJson, `vong2/question_bank/hangngang`, arr);
+                    syncTargetPath = `vong2/question_bank/hangngang/${idx}`;
+                } else if (tblName === 'vong3') {
+                    const arr = getByPath(rootDatabaseJson, `vong3/question_bank`) || [null];
+                    const idx = Number(newRowObj.sttcau || newRowObj.id) || arr.length;
+                    arr[idx] = { cauhoi: newRowObj.cauhoi || '', dapan: newRowObj.danan || '', loai: '', thoigian_giay: Number(newRowObj.thoigian_giay) || 30, url: newRowObj.url || '' };
+                    setByPath(rootDatabaseJson, `vong3/question_bank`, arr);
+                    syncTargetPath = `vong3/question_bank/${idx}`;
+                } else if (tblName === 'vong4') {
+                    const qId = String(newRowObj.id || `${newRowObj.mucdiem || 20}_${activeTable.rows.length + 1}`);
+                    syncTargetPath = `vong4/question_bank/${qId}`;
+                    setByPath(rootDatabaseJson, syncTargetPath, {
+                        cauhoi: newRowObj.cauhoi || '',
+                        dapan: newRowObj.danan || '',
+                        mucdiem: Number(newRowObj.mucdiem) || 20,
+                        url: newRowObj.url || ''
+                    });
+                }
+            } else {
+                const baseNode = activeTable.baseNodeName || tblName;
+                if (activeTable.schemaType === 'grouped_array') {
+                    const grp = newRowObj.group || 'goi1';
+                    const idx = Number(newRowObj.index) || 1;
+                    const { group, index, ...rest } = newRowObj;
+                    syncTargetPath = `${baseNode}/${grp}/${idx}`;
+                    setByPath(rootDatabaseJson, syncTargetPath, unflattenObject(rest));
+                } else if (activeTable.schemaType === 'array_1indexed') {
+                    const idx = Number(newRowObj.index) || 1;
+                    const { index, ...rest } = newRowObj;
+                    syncTargetPath = `${baseNode}/${idx}`;
+                    setByPath(rootDatabaseJson, syncTargetPath, unflattenObject(rest));
+                } else if (activeTable.schemaType === 'object_map') {
+                    const id = String(newRowObj.id || `item_${Date.now()}`);
+                    const { id: _id, ...rest } = newRowObj;
+                    syncTargetPath = `${baseNode}/${id}`;
+                    setByPath(rootDatabaseJson, syncTargetPath, unflattenObject(rest));
+                } else if (activeTable.schemaType === 'key_value') {
+                    syncTargetPath = String(newRowObj.key);
+                    rootDatabaseJson[syncTargetPath] = newRowObj.value;
+                } else {
+                    syncTargetPath = baseNode;
+                    Object.assign(rootDatabaseJson[baseNode], unflattenObject(newRowObj));
+                }
+            }
+
+            if (syncTargetPath) {
+                const payload = getByPath(rootDatabaseJson, syncTargetPath);
+                await syncPathToFirebase(syncTargetPath, payload, 'PUT');
+            }
+            rebuildCurrentCatalog();
+        }
+
+        // =========================================================================
+        // 11. THAO TÁC CHÉP (DUPLICATE), XÓA ĐƠN & XÓA HÀNG LOẠT
+        // =========================================================================
+        async function duplicateRow(rowUid) {
+            const row = activeTable.rows.find(r => r._uid === rowUid);
+            if (!row) return;
+
+            const copyObj = { ...row };
+            if (copyObj.sttcau !== undefined) copyObj.sttcau = Number(copyObj.sttcau) + 1;
+            if (copyObj.index !== undefined) copyObj.index = Number(copyObj.index) + 1;
+            if (copyObj.id !== undefined && typeof copyObj.id === 'string') {
+                copyObj.id = `${copyObj.id}_copy`;
+            } else if (typeof copyObj.id === 'number') {
+                copyObj.id = copyObj.id + 1;
+            }
+            if (copyObj.cauhoi) copyObj.cauhoi = `${copyObj.cauhoi} (Bản sao)`;
+
+            await insertNewRowIntoSourceJson(copyObj);
+        }
+
+        async function deleteSingleRow(rowUid) {
+            const row = activeTable.rows.find(r => r._uid === rowUid);
+            if (!row) return;
+            await deleteTargetPathFromJson(row._targetPath);
+            rebuildCurrentCatalog();
+        }
+
+        async function deleteTargetPathFromJson(path) {
+            if (!path) return;
+            const parts = path.split('/').filter(Boolean);
+            let curr = rootDatabaseJson;
+            for (let i = 0; i < parts.length - 1; i++) {
+                if (!curr) return;
+                curr = curr[parts[i]];
+            }
+            const last = parts[parts.length - 1];
+            if (Array.isArray(curr)) {
+                curr.splice(Number(last), 1);
+                // Vì mảng Firebase thay đổi index sau khi splice, đồng bộ lại cả mảng cha
+                const parentPath = parts.slice(0, -1).join('/');
+                await syncPathToFirebase(parentPath, curr, 'PUT');
+            } else if (curr && typeof curr === 'object') {
+                delete curr[last];
+                await syncPathToFirebase(path, null, 'DELETE');
+            }
+        }
+
+        function toggleSelectAllRows(checked) {
+            const visibleRows = getFilteredAndSortedRows();
+            if (checked) visibleRows.forEach(r => selectedRowUids.add(r._uid));
+            else selectedRowUids.clear();
+            renderTable();
+        }
+
+        function toggleSingleRowSelect(uid, checked) {
+            if (checked) selectedRowUids.add(uid);
+            else selectedRowUids.delete(uid);
+            updateSelectedCounterUI();
+        }
+
+        function updateSelectedCounterUI() {
+            const countEl = document.getElementById('selected-rows-count');
+            if (countEl) countEl.textContent = selectedRowUids.size;
+        }
+
+        function bulkEditSelected() {
+            if (selectedRowUids.size === 0) {
+                showToast('Vui lòng tích chọn ít nhất 1 hàng để sửa!', 'info');
+                return;
+            }
+            openEditModal(Array.from(selectedRowUids)[0]);
+        }
+
+        async function bulkDuplicateSelected() {
+            if (selectedRowUids.size === 0) {
+                showToast('Vui lòng tích chọn ít nhất 1 hàng để chép!', 'info');
+                return;
+            }
+            for (const uid of Array.from(selectedRowUids)) {
+                await duplicateRow(uid);
+            }
+        }
+
+        async function bulkDeleteSelected() {
+            if (selectedRowUids.size === 0) {
+                showToast('Vui lòng tích chọn ít nhất 1 hàng để xóa!', 'info');
+                return;
+            }
+            const paths = Array.from(selectedRowUids)
+                .map(uid => activeTable.rows.find(r => r._uid === uid)?._targetPath)
+                .filter(Boolean);
+            for (const p of paths.reverse()) {
+                await deleteTargetPathFromJson(p);
+            }
+            selectedRowUids.clear();
+            rebuildCurrentCatalog();
+        }
+
+        function bulkExportSelected() {
+            if (selectedRowUids.size === 0) {
+                showToast('Vui lòng tích chọn ít nhất 1 hàng để xuất SQL!', 'info');
+                return;
+            }
+            const chosenRows = activeTable.rows.filter(r => selectedRowUids.has(r._uid));
+            const tempModel = { ...activeTable, rows: chosenRows };
+            document.getElementById('sql-export-box').value = generateSqlForModel(tempModel);
+            switchTab('sql');
+            showToast(`Đã tạo mã SQL cho ${chosenRows.length} dòng đã chọn`, 'success');
+        }
+
+        // =========================================================================
+        // 12. MODAL CHÈN / CHỈNH SỬA CHI TIẾT BẢN GHI
+        // =========================================================================
+        function openInsertModal() {
+            if (!activeTable) return;
+            document.getElementById('modal-mode').value = 'insert';
+            document.getElementById('modal-row-uid').value = '';
+            document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-plus-circle text-emerald-400 mr-2"></i><span>Chèn bản ghi mới vào \`${activeTable.name}\`</span>`;
+
+            const emptyRow = {};
+            const lastRow = activeTable.rows[activeTable.rows.length - 1] || {};
+            activeTable.columns.forEach(c => {
+                if (c === 'idgoi') emptyRow[c] = lastRow.idgoi || 'goi1';
+                else if (c === 'sttcau') emptyRow[c] = (Number(lastRow.sttcau) || 0) + 1;
+                else if (activeTable.stateColumns && activeTable.stateColumns.includes(c)) emptyRow[c] = lastRow[c] ?? '';
+                else emptyRow[c] = '';
+            });
+
+            renderModalFormFields(emptyRow);
+            document.getElementById('row-modal').classList.remove('hidden');
+        }
+
+        function openEditModal(rowUid) {
+            const row = activeTable.rows.find(r => r._uid === rowUid);
+            if (!row) return;
+            document.getElementById('modal-mode').value = 'edit';
+            document.getElementById('modal-row-uid').value = rowUid;
+            document.getElementById('modal-title').innerHTML = `<i class="fa-solid fa-pen-to-square text-amber-400 mr-2"></i><span>Chỉnh sửa bản ghi trong \`${activeTable.name}\`</span>`;
+
+            renderModalFormFields(row);
+            document.getElementById('row-modal').classList.remove('hidden');
+        }
+
+        function renderModalFormFields(rowObj) {
+            const container = document.getElementById('dynamic-form-fields');
+            let html = '';
+
+            activeTable.columns.forEach(col => {
+                const rawVal = rowObj[col];
+                const strVal = rawVal === null || rawVal === undefined ? '' : (typeof rawVal === 'object' ? JSON.stringify(rawVal) : String(rawVal));
+                const isLong = col === 'cauhoi' || col === 'dananthisinh' || col === 'goiy' || strVal.length > 55;
+
+                html += `
+                    <div class="${isLong ? 'sm:col-span-2' : ''}">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                            <span>\`${escapeHtml(col)}\`</span>
+                            <span class="text-[10px] font-mono text-slate-400">${typeof rawVal}</span>
+                        </label>
+                        ${isLong ? `
+                            <textarea data-modal-col="${escapeHtml(col)}" rows="2"
+                                class="modal-field-input w-full px-3 py-1.5 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-sky-500">${escapeHtml(strVal)}</textarea>
+                        ` : `
+                            <input type="text" data-modal-col="${escapeHtml(col)}" value="${escapeHtml(strVal)}"
+                                class="modal-field-input w-full px-3 py-1.5 text-xs font-mono border border-slate-300 rounded-lg focus:outline-none focus:border-sky-500">
+                        `}
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function addCustomColumnInModal() {
+            const container = document.getElementById('dynamic-form-fields');
+            const div = document.createElement('div');
+            div.className = 'sm:col-span-2 p-2.5 bg-sky-50 border border-sky-200 rounded-lg grid grid-cols-2 gap-2 custom-modal-col';
+            div.innerHTML = `
+                <input type="text" placeholder="Tên cột mới..." class="custom-col-name px-2.5 py-1 text-xs font-mono border border-slate-300 rounded bg-white">
+                <input type="text" placeholder="Giá trị..." class="custom-col-value px-2.5 py-1 text-xs font-mono border border-slate-300 rounded bg-white">
+            `;
+            container.appendChild(div);
+        }
+
+        function closeRowModal() {
+            document.getElementById('row-modal').classList.add('hidden');
+        }
+
+        async function handleSaveRowModal(event) {
+            event.preventDefault();
+            const mode = document.getElementById('modal-mode').value;
+            const rowUid = document.getElementById('modal-row-uid').value;
+
+            const collected = {};
+            document.querySelectorAll('.modal-field-input').forEach(el => {
+                const col = el.getAttribute('data-modal-col');
+                collected[col] = parseSmartValue(el.value, 'string', col);
+            });
+            document.querySelectorAll('.custom-modal-col').forEach(box => {
+                const k = box.querySelector('.custom-col-name').value.trim();
+                const v = box.querySelector('.custom-col-value').value;
+                if (k) collected[k] = parseSmartValue(v, 'string', k);
+            });
+
+            closeRowModal();
+            if (mode === 'insert') {
+                await insertNewRowIntoSourceJson(collected);
+            } else {
+                const row = activeTable.rows.find(r => r._uid === rowUid);
+                if (row) await applyCellOrRowUpdate(row, collected);
+            }
+        }
+
+        function inspectCellJson(rowUid, col) {
+            const row = activeTable.rows.find(r => r._uid === rowUid);
+            if (!row) return;
+            const val = row[col];
+            let formatted = String(val ?? '');
+            try {
+                const parsed = typeof val === 'string' ? JSON.parse(val) : val;
+                formatted = JSON.stringify(parsed, null, 2);
+            } catch (_) {}
+
+            document.getElementById('inspector-title').textContent = `Cột \`${col}\` — Bảng \`${activeTable.name}\``;
+            document.getElementById('inspector-content').textContent = formatted;
+            document.getElementById('json-inspector-modal').classList.remove('hidden');
+        }
+
+        // =========================================================================
+        // 13. RENDER CHẾ ĐỘ GOM NHÓM THEO GÓI (RAW TREE GROUPED)
+        // =========================================================================
+        function renderRawGroupedPackages(rows) {
+            const container = document.getElementById('grouped-tables-container');
+            const groupedMap = new Map();
+            rows.forEach(r => {
+                const grp = r._group || activeTable.subGroup || activeTable.name;
+                if (!groupedMap.has(grp)) groupedMap.set(grp, []);
+                groupedMap.get(grp).push(r);
+            });
+
+            const dataCols = activeTable.columns.filter(c => c !== 'group' && c !== 'index');
+            let html = '';
+
+            groupedMap.forEach((grpRows, grpKey) => {
+                const match = String(grpKey).match(/^goi[_-]?(\d+)$/i);
+                const title = match ? `Gói ${match[1]} — ${grpKey}` : `Nhóm — ${grpKey}`;
+                const isCollapsed = collapsedGroupCards.has(grpKey);
+
+                html += `
+                    <div class="bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden">
+                        <div class="bg-gradient-to-r from-slate-800 to-purple-950 text-white px-4 py-2.5 flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5 cursor-pointer" onclick="toggleGroupCollapse('${escapeHtml(grpKey)}')">
+                                <i class="fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'} text-xs text-purple-300"></i>
+                                <i class="fa-solid fa-layer-group text-amber-400"></i>
+                                <span class="font-bold text-sm sm:text-base">${escapeHtml(title)}</span>
+                                <span class="bg-purple-500/30 border border-purple-400/40 text-purple-100 text-xs font-mono px-2.5 py-0.5 rounded-full">${grpRows.length} câu hỏi</span>
+                            </div>
+                        </div>
+                        <div class="${isCollapsed ? 'hidden' : 'overflow-x-auto'}">
+                            <table class="w-full text-left border-collapse text-xs sm:text-[13px] pma-table">
+                                <thead>
+                                    <tr class="border-b-2 border-purple-200 text-slate-800">
+                                        <th class="py-2 px-3 border-r border-slate-200 w-16 text-center font-bold">STT</th>
+                                        ${dataCols.map(c => `<th class="py-2 px-3 border-r border-slate-200 font-bold">${escapeHtml(c)}</th>`).join('')}
+                                        <th class="py-2 px-3 w-32 text-center font-semibold">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200 font-mono">
+                                    ${grpRows.map((row, idx) => `
+                                        <tr class="${idx % 2 === 0 ? 'pma-row-odd' : 'pma-row-even'}">
+                                            <td class="py-2 px-3 border-r border-slate-200 text-center font-bold text-purple-800">${row.index ?? (idx + 1)}</td>
+                                            ${dataCols.map(c => renderInteractiveCell(row._uid, c, row[c])).join('')}
+                                            <td class="py-2 px-3 text-center whitespace-nowrap font-sans text-xs">
+                                                <button onclick="openEditModal('${escapeHtml(row._uid)}')" class="text-sky-700 hover:underline mr-2 cursor-pointer">Sửa</button>
+                                                <button onclick="deleteSingleRow('${escapeHtml(row._uid)}')" class="text-red-600 hover:underline cursor-pointer">Xóa</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function toggleGroupCollapse(grpKey) {
+            if (collapsedGroupCards.has(grpKey)) collapsedGroupCards.delete(grpKey);
+            else collapsedGroupCards.add(grpKey);
+            renderTable();
+        }
+
+        // =========================================================================
+        // 14. TAB CẤU TRÚC (STRUCTURE) & XUẤT SQL / JSON
+        // =========================================================================
+        function inferMysqlType(rows, col) {
+            let maxLen = 0, hasStr = false, hasBigInt = false, hasInt = false, hasFloat = false, hasBool = false, hasJson = false;
+            rows.forEach(r => {
+                const v = r[col];
+                if (v === null || v === undefined || v === '') return;
+                if (typeof v === 'object') hasJson = true;
+                else if (typeof v === 'boolean') hasBool = true;
+                else if (typeof v === 'number') {
+                    if (!Number.isInteger(v)) hasFloat = true;
+                    else if (Math.abs(v) > 2147483647) hasBigInt = true;
+                    else hasInt = true;
+                } else {
+                    const s = String(v);
+                    if ((s.startsWith('{') && s.endsWith('}')) || (s.startsWith('[') && s.endsWith(']'))) hasJson = true;
+                    else { hasStr = true; maxLen = Math.max(maxLen, s.length); }
+                }
+            });
+            if (hasJson) return 'JSON / LONGTEXT';
+            if (hasStr) return maxLen > 120 ? 'TEXT' : 'VARCHAR(255)';
+            if (hasFloat) return 'DOUBLE';
+            if (hasBigInt) return 'BIGINT(20)';
+            if (hasInt) return 'INT(11)';
+            if (hasBool) return 'BOOLEAN';
+            return 'VARCHAR(255)';
+        }
+
+        function renderStructureTab() {
+            if (!activeTable) return;
+            document.getElementById('structure-table-title').textContent = `\`${activeTable.name}\``;
+            document.getElementById('structure-schema-badge').textContent = `${activeTable.badge} • InnoDB utf8mb4_unicode_ci`;
+
+            const tbody = document.getElementById('structure-table-body');
+            let html = '';
+
+            activeTable.columns.forEach((col, idx) => {
+                const sqlType = inferMysqlType(activeTable.rows, col);
+                const isPk = col === activeTable.primaryKey;
+                const isNum = sqlType.startsWith('INT') || sqlType.startsWith('BIGINT') || sqlType === 'DOUBLE' || sqlType === 'BOOLEAN';
+                const isStateCol = activeTable.stateColumns && activeTable.stateColumns.includes(col);
+
+                html += `
+                    <tr class="${idx % 2 === 0 ? 'pma-row-odd' : 'pma-row-even'}">
+                        <td class="py-2 px-3 border-r border-slate-200 text-center text-slate-500">${idx + 1}</td>
+                        <td class="py-2 px-3 border-r border-slate-200 font-bold text-slate-900 flex items-center">
+                            ${isPk ? '<i class="fa-solid fa-key text-amber-500 mr-1.5"></i>' : ''}
+                            ${escapeHtml(col)}
+                        </td>
+                        <td class="py-2 px-3 border-r border-slate-200 text-blue-700 font-semibold">${sqlType}</td>
+                        <td class="py-2 px-3 border-r border-slate-200 text-slate-500">${isNum ? '—' : 'utf8mb4_unicode_ci'}</td>
+                        <td class="py-2 px-3 border-r border-slate-200 text-slate-700">${isPk ? 'Không' : 'Có'}</td>
+                        <td class="py-2 px-3 border-r border-slate-200">${isPk ? '<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-semibold">PRI</span>' : '—'}</td>
+                        <td class="py-2 px-3 border-r border-slate-200 text-slate-400 italic">${isPk ? 'None' : 'NULL'}</td>
+                        <td class="py-2 px-3 text-slate-500 font-sans text-xs">${isStateCol ? 'Trạng thái thi đấu (match_state)' : 'Thuộc tính bản ghi'}</td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function generateSqlForModel(model) {
+            const safeName = model.name.replace(/\./g, '_');
+            const cols = model.columns;
+            const createLines = cols.map(col => {
+                const t = inferMysqlType(model.rows, col).replace('JSON / ', '').toLowerCase();
+                return `  \`${col}\` ${t} DEFAULT NULL`;
+            });
+            let sql = `-- --------------------------------------------------------\n-- Bảng \`${safeName}\`\n-- --------------------------------------------------------\n`;
+            sql += `CREATE TABLE IF NOT EXISTS \`${safeName}\` (\n${createLines.join(',\n')}\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n\n`;
+
+            if (model.rows.length > 0) {
+                sql += `INSERT INTO \`${safeName}\` (${cols.map(c => `\`${c}\``).join(', ')}) VALUES\n`;
+                const valLines = model.rows.map(r => {
+                    const vals = cols.map(c => {
+                        const v = r[c];
+                        if (v === null || v === undefined || v === '') return 'NULL';
+                        if (typeof v === 'number') return v;
+                        if (typeof v === 'boolean') return v ? 1 : 0;
+                        if (typeof v === 'object') return `'${JSON.stringify(v).replace(/'/g, "''")}'`;
+                        return `'${String(v).replace(/'/g, "''")}'`;
+                    });
+                    return `  (${vals.join(', ')})`;
+                });
+                sql += valLines.join(',\n') + ';\n\n';
+            }
+            return sql;
+        }
+
+        function setExportScope(scope) {
+            exportScope = scope;
+            const btnT = document.getElementById('export-scope-table');
+            const btnD = document.getElementById('export-scope-db');
+            if (scope === 'table') {
+                btnT.className = 'px-3 py-1 rounded bg-sky-600 text-white font-medium text-xs cursor-pointer';
+                btnD.className = 'px-3 py-1 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 font-medium text-xs cursor-pointer';
+            } else {
+                btnD.className = 'px-3 py-1 rounded bg-sky-600 text-white font-medium text-xs cursor-pointer';
+                btnT.className = 'px-3 py-1 rounded bg-slate-200 text-slate-700 hover:bg-slate-300 font-medium text-xs cursor-pointer';
+            }
+            renderSqlAndJsonExport();
+        }
+
+        function exportFullDatabaseSql() {
+            setExportScope('database');
+            switchTab('sql');
+        }
+
+        function renderSqlAndJsonExport() {
+            const dbName = document.getElementById('sidebar-db-name').textContent;
+            let sqlOut = `-- FirebaseMyAdmin SQL Dump\n-- Database: \`${dbName}\`\n-- Exported: ${new Date().toLocaleString('vi-VN')}\n\nSET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";\n\n`;
+
+            if (exportScope === 'database' || !activeTable) {
+                Object.values(tablesCatalog).forEach(tbl => { sqlOut += generateSqlForModel(tbl); });
+                document.getElementById('json-export-box').value = JSON.stringify(rootDatabaseJson, null, 2);
+            } else {
+                sqlOut += generateSqlForModel(activeTable);
+                const nodeKey = activeTable.name === 'vong1_rieng_sub' ? 'vong1_rieng' : (activeTable.baseNodeName || activeTable.name);
+                document.getElementById('json-export-box').value = JSON.stringify(rootDatabaseJson[nodeKey] ?? rootDatabaseJson, null, 2);
+            }
+            document.getElementById('sql-export-box').value = sqlOut;
+        }
+
+        function downloadSqlFile() {
+            const content = document.getElementById('sql-export-box').value;
+            const fileName = exportScope === 'database' ? 'cnpt_test_rtdb_full.sql' : `${activeTable?.name || 'export'}.sql`;
+            triggerDownload(content, fileName, 'application/sql;charset=utf-8');
+        }
+
+        function downloadJsonFile() {
+            const content = document.getElementById('json-export-box').value;
+            const fileName = exportScope === 'database' ? 'cnpt_test_rtdb_full.json' : `${activeTable?.name || 'export'}.json`;
+            triggerDownload(content, fileName, 'application/json;charset=utf-8');
+        }
+
+        function triggerDownload(content, fileName, mime) {
+            const blob = new Blob([content], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Đã tải xuống tệp ${fileName}`, 'success');
+        }
+
+        // =========================================================================
+        // 15. TIỆN ÍCH HELPER & CHUYỂN TAB
+        // =========================================================================
+        function getByPath(obj, path) {
+            return path.split('/').filter(Boolean).reduce((acc, k) => (acc ? acc[k] : undefined), obj);
+        }
+
+        function setByPath(obj, path, value) {
+            const parts = path.split('/').filter(Boolean);
+            let curr = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+                const p = parts[i];
+                const nextKey = parts[i + 1];
+                const nextIsPositiveIndex = /^\d+$/.test(nextKey) && Number(nextKey) >= 1;
+                if (!curr[p] || typeof curr[p] !== 'object') {
+                    curr[p] = nextIsPositiveIndex ? [null] : {};
+                }
+                curr = curr[p];
+            }
+            const last = parts[parts.length - 1];
+            if (Array.isArray(curr) && /^\d+$/.test(last)) {
+                const idx = Number(last);
+                if (idx >= 1 && curr[0] === undefined) {
+                    curr[0] = null; // Luôn bảo toàn phần tử null ở index 0 cho mảng 1-indexed của Firebase
+                }
+                curr[idx] = value;
+            } else {
+                curr[last] = value;
+            }
+        }
+
+        function switchTab(tabName) {
+            ['overview', 'browse', 'structure', 'sql'].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                const btn = document.getElementById(`tab-btn-${v}`);
+                if (v === tabName) {
+                    el.classList.remove('hidden');
+                    btn.className = 'pma-tab-active px-3.5 py-2 rounded-t-lg text-xs sm:text-sm flex items-center space-x-1.5 transition cursor-pointer';
+                } else {
+                    el.classList.add('hidden');
+                    btn.className = 'pma-tab-inactive px-3.5 py-2 rounded-t-lg text-xs sm:text-sm flex items-center space-x-1.5 transition cursor-pointer';
+                }
+            });
+            if (tabName === 'sql') renderSqlAndJsonExport();
+        }
+
+        function updateTimestamp() {
+            document.getElementById('last-updated-time').textContent = `Cập nhật: ${new Date().toLocaleTimeString('vi-VN')}`;
+        }
+
+        function copyText(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast('Đã sao chép vào bộ nhớ tạm!', 'success');
+            } catch (_) {}
+            document.body.removeChild(ta);
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const styles = {
+                success: 'bg-emerald-600 text-white border-emerald-700',
+                error: 'bg-red-600 text-white border-red-700',
+                info: 'bg-slate-800 text-white border-slate-900'
+            };
+            const icons = {
+                success: 'fa-circle-check',
+                error: 'fa-circle-exclamation',
+                info: 'fa-circle-info'
+            };
+            toast.className = `${styles[type]} border px-4 py-2 rounded-lg shadow-lg text-xs sm:text-sm font-medium flex items-center space-x-2 pointer-events-auto transition-all duration-300`;
+            toast.innerHTML = `<i class="fa-solid ${icons[type]}"></i><span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

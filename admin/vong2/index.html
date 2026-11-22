@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <link rel="icon" href="data:,">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympia Admin - Vòng 2</title>
+    
+    <style>
+        :root {
+            --bg-body: #eef2f7;
+            --primary-dark: #003366;
+            --primary: #007bff;
+            --primary-hover: #0056b3;
+            --success: #28a745;
+            --success-hover: #218838;
+            --danger: #dc3545;
+            --danger-hover: #c82333;
+            --warning: #ffc107;
+            --warning-hover: #e0a800;
+            --info: #17a2b8;
+            --info-hover: #138496;
+            --secondary: #6c757d;
+            --border-color: #dce4ec;
+            --card-shadow: 0 4px 12px rgba(0, 51, 102, 0.08);
+        }
+
+        /* ================= BASE & LAYOUT ================= */
+        *, *::before, *::after { box-sizing: border-box; }
+        html, body { height: 100%; margin: 0; padding: 0; }
+        body, button, input, select, textarea {
+            font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+        }
+        body {
+            background: var(--bg-body);
+            padding: 16px;
+            color: #2c3e50;
+            display: flex;
+            flex-direction: column;
+            line-height: 1.4;
+        }
+
+        .q-timer-badge,
+        .team-score {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 1920px;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            gap: 14px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* ================= LOADING & POPUPS ================= */
+        #loading-overlay {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 51, 102, 0.95); color: #ffd700;
+            padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 1rem;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35); border: 2px solid #56ccf2;
+            z-index: 9999; display: none; align-items: center; gap: 12px;
+            white-space: nowrap;
+        }
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.25); border-top: 3px solid #ffd700;
+            border-radius: 50%; width: 20px; height: 20px; animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #custom-popup-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7);
+            z-index: 10000; justify-content: center; align-items: center;
+            backdrop-filter: blur(4px); padding: 16px; animation: fadeIn 0.2s ease;
+        }
+        .custom-popup-box {
+            background: #fff; border-radius: 14px; padding: 28px; width: 100%; max-width: 440px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center;
+            border-top: 5px solid var(--primary); animation: slideDown 0.25s ease;
+        }
+        .custom-popup-box h3 { margin: 0 0 12px; color: var(--primary-dark); font-size: 1.35rem; text-transform: uppercase; }
+        .custom-popup-box p { font-size: 1.05rem; color: #475569; margin: 0 0 24px; line-height: 1.5; }
+        .custom-popup-btn-container { display: flex; justify-content: center; gap: 12px; }
+        .custom-popup-btn {
+            padding: 10px 24px; border: none; border-radius: 8px; font-weight: 600;
+            cursor: pointer; font-size: 1rem; transition: 0.2s; min-width: 110px;
+        }
+        #custom-popup-btn-cancel { background: var(--secondary); color: #fff; display: none; }
+        #custom-popup-btn-cancel:hover { background: #5a6268; }
+        #custom-popup-btn-ok { background: var(--primary); color: #fff; }
+        #custom-popup-btn-ok:hover { background: var(--primary-hover); }
+
+        #review-popup-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8);
+            z-index: 10000; justify-content: center; align-items: center;
+            backdrop-filter: blur(4px); padding: 16px; animation: fadeIn 0.2s ease;
+        }
+        .review-box {
+            background: #fff; padding: 24px; border-radius: 14px; width: 100%; max-width: 1360px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.35); border-top: 5px solid #ff416c;
+            position: relative; max-height: 90vh; overflow-y: auto;
+        }
+        .review-box-title { color: #ff416c; text-align: center; margin: 0 32px 0; font-size: 1.5rem; text-transform: uppercase; }
+        .review-container {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px; margin-top: 20px;
+        }
+        .review-card {
+            border: 1px solid var(--border-color); padding: 16px; border-radius: 10px;
+            background: #f8fafc; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        }
+        .review-card h4 {
+            margin: 0 0 12px; color: var(--primary-dark); font-size: 1.25rem;
+            border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; text-transform: uppercase;
+        }
+        .review-close-btn {
+            position: absolute; top: 14px; right: 16px; font-size: 1.4rem;
+            background: transparent; border: none; font-weight: bold;
+            color: var(--danger); cursor: pointer; transition: 0.2s; padding: 4px 8px;
+        }
+        .review-close-btn:hover { transform: scale(1.15); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideDown { from { transform: translateY(-16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* ================= HEADER ================= */
+        .header-panel {
+            background: linear-gradient(135deg, #00264d 0%, #004080 100%);
+            color: white; padding: 14px 24px; border-radius: 12px;
+            display: flex; justify-content: space-between; align-items: center; gap: 16px;
+            box-shadow: var(--card-shadow); flex-shrink: 0;
+        }
+        .header-panel h1 {
+            margin: 0; font-size: clamp(1.2rem, 2vw, 1.85rem);
+            letter-spacing: 0.5px; text-align: center; flex: 1;
+        }
+        .btn-prev-round, .btn-next-round {
+            color: white; padding: 10px 18px; border-radius: 8px; font-weight: 700;
+            font-size: 0.95rem; transition: 0.2s; display: inline-flex; align-items: center;
+            justify-content: center; text-transform: uppercase; letter-spacing: 0.5px;
+            border: none; cursor: pointer; font-family: inherit; white-space: nowrap;
+        }
+        .btn-prev-round { background: var(--primary); box-shadow: 0 3px 8px rgba(0,123,255,0.3); }
+        .btn-prev-round:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-next-round { background: var(--success); box-shadow: 0 3px 8px rgba(40,167,69,0.3); }
+        .btn-next-round:hover { background: var(--success-hover); transform: translateY(-1px); }
+
+        /* ================= ACTION BAR ================= */
+        .action-panel {
+            background: #fff; padding: 12px 16px; border-radius: 10px;
+            box-shadow: var(--card-shadow); display: flex; flex-wrap: wrap;
+            align-items: center; gap: 10px; flex-shrink: 0;
+        }
+        .action-btn {
+            padding: 9px 15px; border: none; border-radius: 7px; font-weight: 600;
+            font-size: 0.9rem; cursor: pointer; transition: 0.2s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .action-btn:hover { filter: brightness(0.92); transform: translateY(-1px); }
+        .btn-reload { background: var(--success); color: #fff; }
+        .btn-close-q { background: var(--danger); color: #fff; }
+        .btn-reset-blur { background: var(--warning); color: #1e293b; }
+        .btn-toggle-ans { background: var(--info); color: #fff; }
+        .btn-sound-toggle { background: var(--primary-dark); color: #fff; }
+        .btn-sound-toggle.muted { background: var(--secondary); color: #fff; }
+
+        .direct-mode-tag {
+            margin-left: auto;
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        /* ================= MAIN 3-COLUMN GRID ================= */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 5fr 3fr 4fr;
+            gap: 16px;
+            flex: 1;
+            min-height: 0;
+        }
+        .panel {
+            background: #fff; padding: 18px; border-radius: 12px;
+            box-shadow: var(--card-shadow); display: flex; flex-direction: column;
+            overflow: hidden; min-height: 0;
+        }
+        .panel h3 {
+            margin: 0 0 14px; padding-bottom: 10px; font-size: 1.1rem;
+            color: var(--primary-dark); border-bottom: 2px solid #edf2f7;
+            text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+        }
+
+        /* ================= CỘT 1: BẢNG ĐIỂM & NHẬP ĐÁP ÁN ================= */
+        #team-list-container {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            overflow-y: auto;
+            padding-right: 4px;
+            align-content: start;
+        }
+        .team-card {
+            border: 1.5px solid #cbd5e1; border-top: 4px solid var(--primary);
+            border-radius: 10px; padding: 14px; display: flex; flex-direction: column;
+            gap: 10px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            transition: 0.25s;
+        }
+        .team-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,123,255,0.12); }
+        .team-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+        .team-name { font-size: 1.1rem; font-weight: 700; color: var(--primary-dark); }
+        .team-score { font-size: 1.9rem; font-weight: 800; color: var(--primary-dark); line-height: 1; }
+        .ans-box {
+            border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;
+            background: #f8fafc; display: flex; flex-direction: column; gap: 6px;
+        }
+        .ans-correct-line {
+            font-size: 0.9rem; color: var(--success); font-weight: 700;
+            border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;
+        }
+        .ans-saved-line {
+            font-size: 0.9rem; color: var(--danger); font-weight: 700;
+            display: flex; justify-content: space-between; align-items: center; gap: 6px;
+        }
+        .ans-saved-val { font-size: 1.05rem; color: #0056b3; word-break: break-word; }
+        .time-text { color: var(--success); font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+
+        .direct-ans-row {
+            display: flex; gap: 6px; margin-top: 2px;
+        }
+        .direct-ans-input {
+            flex: 1; min-width: 0; padding: 7px 10px; font-size: 0.92rem; font-weight: 600;
+            border: 1.5px solid #cbd5e1; border-radius: 6px; outline: none; color: #1e293b;
+            background: #fff;
+        }
+        .direct-ans-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
+        }
+        .btn-save-ans {
+            background: var(--primary); color: #fff; border: none; border-radius: 6px;
+            padding: 7px 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+            white-space: nowrap; transition: 0.2s;
+        }
+        .btn-save-ans:hover { background: var(--primary-hover); }
+
+        .score-ctrl { display: flex; align-items: center; gap: 8px; }
+        .btn-add, .btn-sub {
+            flex: 1; height: 38px; display: flex; justify-content: center; align-items: center;
+            color: white; border: none; border-radius: 7px; font-weight: 700;
+            font-size: 1.35rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-sub { background: var(--danger); }
+        .btn-sub:hover { background: var(--danger-hover); }
+        .btn-add { background: var(--success); }
+        .btn-add:hover { background: var(--success-hover); }
+        .score-input {
+            width: 58px; height: 38px; text-align: center; font-size: 1.05rem;
+            font-weight: 700; border: 1.5px solid #cbd5e1; border-radius: 7px;
+            outline: none; color: var(--primary-dark);
+        }
+        .score-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,123,255,0.15); }
+
+        /* Loại đội */
+        .team-eliminated { filter: grayscale(100%); opacity: 0.45; pointer-events: none; }
+        .team-eliminated .team-header button { pointer-events: auto; }
+        .btn-loai {
+            background: var(--secondary); color: #fff; border: none; border-radius: 5px;
+            padding: 4px 8px; font-size: 0.75rem; cursor: pointer; margin-left: 8px;
+            font-weight: 700; transition: 0.2s; white-space: nowrap;
+        }
+        .btn-loai:hover { filter: brightness(0.9); }
+
+        /* ================= CỘT 2: LẬT MẢNH GHÉP ================= */
+        .puzzle-ctrl-container { display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
+        .puzzle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1; }
+        .p-btn {
+            background: var(--primary); color: white; border: none; font-size: 1.7rem;
+            font-weight: 800; border-radius: 12px; cursor: pointer; transition: 0.25s;
+            box-shadow: 0 4px 10px rgba(0,123,255,0.25); min-height: 90px;
+        }
+        .p-btn:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .p-btn.opened { background: var(--success); opacity: 0.55; box-shadow: none; transform: none; }
+        .p-center-btn {
+            background: var(--danger); color: white; border: none; font-size: 1.25rem;
+            font-weight: 800; border-radius: 12px; cursor: pointer; transition: 0.25s;
+            box-shadow: 0 4px 10px rgba(220,53,69,0.25); padding: 18px;
+            text-transform: uppercase; width: 100%; letter-spacing: 0.5px;
+        }
+        .p-center-btn:hover { background: var(--danger-hover); transform: translateY(-2px); }
+        .p-center-btn.opened { background: var(--success); opacity: 0.75; box-shadow: none; transform: none; }
+
+        /* ================= CỘT 3: CÂU HỎI & ĐỒNG HỒ ================= */
+        .q-scroll { overflow-y: auto; flex: 1; padding-right: 4px; display: flex; flex-direction: column; gap: 10px; }
+        .q-item {
+            padding: 14px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+            background: #f8fafc; transition: 0.25s; font-size: 0.95rem;
+        }
+        .q-item-header {
+            display: flex; justify-content: space-between; align-items: center; gap: 8px;
+            margin-bottom: 6px; flex-wrap: wrap;
+        }
+        .q-item b { color: var(--primary-dark); }
+        .q-timer-badge {
+            font-size: 1rem; font-weight: 800; padding: 3px 10px; border-radius: 6px;
+            background: #e2e8f0; color: #334155; white-space: nowrap;
+        }
+        .q-timer-badge.running { background: #003366; color: #ffd700; }
+        .q-timer-badge.paused { background: #fff3cd; color: #b45309; border: 1px solid #f59e0b; }
+        .q-timer-badge.urgent { background: var(--danger); color: #fff; }
+        .q-timer-badge.timeup { background: #cbd5e1; color: #64748b; }
+
+        .q-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+        .btn-show, .btn-pause, .btn-ans-q, .btn-blur, .btn-review {
+            border: none; padding: 7px 11px; cursor: pointer; border-radius: 6px;
+            font-weight: 600; font-size: 0.85rem; transition: 0.2s;
+        }
+        .btn-show { background: var(--primary-dark); color: #fff; }
+        .btn-show:hover { background: #004c99; }
+
+        .btn-pause { background: #fd7e14; color: #fff; }
+        .btn-pause:hover:not(:disabled) { background: #e8590c; }
+        .btn-pause.is-paused { background: var(--success); color: #fff; }
+        .btn-pause.is-paused:hover:not(:disabled) { background: var(--success-hover); }
+        .btn-pause:disabled { background: #cbd5e1; color: #64748b; cursor: not-allowed; opacity: 0.7; }
+
+        .btn-ans-q { background: var(--success); color: #fff; }
+        .btn-ans-q:hover { background: var(--success-hover); }
+
+        .btn-blur { background: var(--secondary); color: #fff; }
+        .btn-blur:hover { background: #5a6268; }
+        .btn-review { background: var(--warning); color: #1e293b; }
+        .btn-review:hover { background: var(--warning-hover); }
+
+        .blurred { opacity: 0.45 !important; filter: grayscale(100%); pointer-events: none; }
+        .q-item.blurred .btn-blur,
+        .q-item.blurred .btn-ans-q { pointer-events: auto; }
+        .q-item.blurred .btn-blur { background: #343a40; }
+
+        /* ================= RESPONSIVE BREAKPOINTS ================= */
+        @media (max-width: 1200px) {
+            html, body { height: auto; min-height: 100%; }
+            .dashboard { flex: none; }
+            .main-grid { grid-template-columns: 1fr 1fr; flex: none; }
+            .main-grid > .panel:first-child { grid-column: 1 / -1; }
+            .panel { overflow: visible; }
+            #team-list-container, .q-scroll { overflow-y: visible; }
+            .p-btn { min-height: 110px; }
+        }
+
+        @media (max-width: 860px) {
+            .header-panel { flex-wrap: wrap; justify-content: center; padding: 14px 16px; }
+            .header-panel h1 { order: -1; flex: 1 0 100%; margin-bottom: 4px; }
+            .btn-prev-round, .btn-next-round { flex: 1; font-size: 0.85rem; padding: 9px 12px; }
+            .main-grid { grid-template-columns: 1fr; }
+            .action-btn { flex: 1 1 calc(50% - 10px); justify-content: center; }
+            .direct-mode-tag { margin-left: 0; width: 100%; text-align: center; }
+        }
+
+        @media (max-width: 576px) {
+            body { padding: 10px; }
+            .panel { padding: 14px; }
+            #team-list-container { grid-template-columns: 1fr; }
+            .action-btn { flex: 1 1 100%; }
+            .p-btn { font-size: 1.4rem; min-height: 85px; }
+            .p-center-btn { font-size: 1.15rem; padding: 14px; }
+            .review-box { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="custom-popup-overlay">
+        <div class="custom-popup-box">
+            <h3 id="custom-popup-title">THÔNG BÁO</h3>
+            <p id="custom-popup-msg"></p>
+            <div class="custom-popup-btn-container">
+                <button class="custom-popup-btn" id="custom-popup-btn-cancel">HỦY</button>
+                <button class="custom-popup-btn" id="custom-popup-btn-ok">ĐỒNG Ý</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="review-popup-overlay">
+        <div class="review-box">
+            <button class="review-close-btn" onclick="closeReviewPopup()">✖</button>
+            <h3 class="review-box-title" id="review-title">XEM LẠI ĐÁP ÁN</h3>
+            <div class="review-container" id="review-popup-content"></div>
+        </div>
+    </div>
+
+    <div id="loading-overlay"><div class="spinner"></div><span id="loading-text">Đang xử lý...</span></div>
+
+    <div class="dashboard">
+        <div class="header-panel">
+            <button onclick="goToRound1()" class="btn-prev-round">◀ VỀ LẠI VÒNG 1</button>
+            <h1>BẢNG ĐIỀU KHIỂN MC - VÒNG 2</h1>
+            <button onclick="goToRound3()" class="btn-next-round">CHUYỂN VÒNG 3 ▶</button>
+        </div>
+        
+        <div class="action-panel">
+            <button class="action-btn btn-reload" onclick="window.location.reload()">🔄 TẢI LẠI TRANG</button>
+            <button class="action-btn btn-close-q" onclick="closeQuestionV2()">ĐÓNG CÂU HỎI &amp; RESET GIỜ</button>
+            <button class="action-btn btn-reset-blur" onclick="resetBlurAll()">XÓA TOÀN BỘ MẢNH MỜ (TẠO TRẬN MỚI)</button>
+            <button id="btn-show-ans-v2" class="action-btn btn-toggle-ans" onclick="toggleShowAnswerV2()">👁 HIỆN ĐÁP ÁN KHÁN GIẢ</button>
+            <button id="btn-sound-toggle" class="action-btn btn-sound-toggle" onclick="toggleAdminSound()">🔊 Âm thanh: BẬT</button>
+            <span class="direct-mode-tag">💻 CHẾ ĐỘ: TRẢ LỜI TRỰC TIẾP TRÊN MÁY TÍNH</span>
+        </div>
+
+        <div class="main-grid">
+            <div class="panel">
+                <h3>
+                    <span>Đáp án &amp; Điểm số</span>
+                    <button class="btn-blur" style="font-size:0.78rem; padding:5px 10px;" onclick="clearCurrentAnswers()">🗑 Xóa ĐA hiện tại</button>
+                </h3>
+                <div id="team-list-container">Đang tải...</div>
+            </div>
+            <div class="panel">
+                <h3>Lật Mảnh Ghép / Hiện Chữ</h3>
+                <div class="puzzle-ctrl-container">
+                    <div class="puzzle-grid">
+                        <button class="p-btn" id="btn-p1" onclick="togglePiece('p1')">Ô 1</button>
+                        <button class="p-btn" id="btn-p2" onclick="togglePiece('p2')">Ô 2</button>
+                        <button class="p-btn" id="btn-p3" onclick="togglePiece('p3')">Ô 3</button>
+                        <button class="p-btn" id="btn-p4" onclick="togglePiece('p4')">Ô 4</button>
+                    </div>
+                    <button class="p-center-btn" id="btn-p5" onclick="togglePiece('p5')">MỞ HÌNH TRUNG TÂM &amp; BỎ MỜ</button>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Phát Câu hỏi (30s)</h3>
+                <div class="q-scroll" id="question-list">Đang tải...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+// ĐỒNG BỘ GIỜ CHUẨN VỚI MÁY CHỦ FIREBASE
+// ==========================================
+let serverTimeOffset = 0;
+
+function getServerNow() {
+    return Date.now() + serverTimeOffset;
+}
+
+async function syncServerClock(fbBaseUrl) {
+    if (!fbBaseUrl) return;
+    const clientId = "c_" + Math.random().toString(36).slice(2, 10);
+    const url = `${fbBaseUrl}/_clock_sync/${clientId}.json`;
+    try {
+        const t0 = Date.now();
+        const res = await fetch(url, {
+            method: "PUT",
+            body: JSON.stringify({ ".sv": "timestamp" })
+        });
+        const serverTs = await res.json();
+        const t1 = Date.now();
+        if (typeof serverTs === "number") {
+            serverTimeOffset = serverTs - Math.round((t0 + t1) / 2);
+        }
+        fetch(url, { method: "DELETE" }).catch(() => {});
+    } catch (e) {
+        console.warn("Không thể đồng bộ giờ máy chủ:", e);
+    }
+}
+
+        const API_VONG2_CFG = "../../api/vong2.json";
+        let FB_VONG2 = "";   // .../vong2
+        let FB_DIEMSO = "";  // .../diemso
+
+        // ==========================================
+        // CẤU HÌNH ÂM THANH
+        // ==========================================
+        const AUDIO_DIR = "../../sound_effect/";
+        const SOUNDS = {
+            welcome: new Audio(`${AUDIO_DIR}welcome.mp3`),
+            timer30: new Audio(`${AUDIO_DIR}sound30s.mp3`),
+            timer50: new Audio(`${AUDIO_DIR}50s.mp3`)
+        };
+        Object.values(SOUNDS).forEach(a => { a.preload = "auto"; });
+
+        let isAdminSoundMuted = false;
+        let lastPlayedTimerKey = "";
+        let lastAnswerSoundKey = "";
+
+        function toggleAdminSound() {
+            isAdminSoundMuted = !isAdminSoundMuted;
+            const btn = document.getElementById('btn-sound-toggle');
+            if (isAdminSoundMuted) {
+                btn.innerText = "🔇 Âm thanh: TẮT";
+                btn.classList.add('muted');
+                stopAllSounds();
+            } else {
+                btn.innerText = "🔊 Âm thanh: BẬT";
+                btn.classList.remove('muted');
+            }
+        }
+
+        function stopAllSounds() {
+            Object.values(SOUNDS).forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+            });
+        }
+
+        function stopTimerSound() {
+            SOUNDS.timer30.pause();
+            SOUNDS.timer30.currentTime = 0;
+        }
+
+        function playSound(key, restart = true) {
+            if (isAdminSoundMuted || !SOUNDS[key]) return;
+            try {
+                if (restart) SOUNDS[key].currentTime = 0;
+                SOUNDS[key].play().catch(() => {});
+            } catch (e) {}
+        }
+
+        function isCurrentAnswerRevealed() {
+            const curKey = String(globalTrangThai.cauHoiHienTai || "");
+            if (!curKey) return false;
+            return (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true");
+        }
+
+        function checkAndTriggerAnswerSound() {
+            const curKey = String(globalTrangThai.cauHoiHienTai || "");
+            if (!curKey || !isCurrentAnswerRevealed()) {
+                lastAnswerSoundKey = "";
+                return;
+            }
+            const soundKey = `${curKey}_${globalTrangThai.answerTrigger || ""}`;
+            if (lastAnswerSoundKey !== soundKey) {
+                lastAnswerSoundKey = soundKey;
+                stopTimerSound();
+                playSound('welcome', true);
+            }
+        }
+
+        // ==========================================
+        // KẾT NỐI FIREBASE
+        // ==========================================
+        async function initFirebaseConfig() {
+            try {
+                const res = await fetch(API_VONG2_CFG + "?_t=" + Date.now());
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const cfg = await res.json();
+                const url = (cfg.api_url || "").trim();
+                if (!url) throw new Error("Thiếu api_url trong " + API_VONG2_CFG);
+
+                FB_VONG2 = url.replace(/\.json$/, "").replace(/\/$/, "");
+                FB_DIEMSO = FB_VONG2.replace(/\/vong2$/, "") + "/diemso";
+            } catch (e) {
+                console.error("Lỗi đọc cấu hình Firebase:", e);
+            }
+        }
+
+        function fbToObj(x) {
+            if (Array.isArray(x)) {
+                const o = {};
+                x.forEach((v, i) => { if (v !== null && v !== undefined) o[String(i)] = v; });
+                return o;
+            }
+            return x || {};
+        }
+
+        async function fbSend(method, path, body) {
+            const res = await fetch(`${FB_VONG2}${path}.json`, {
+                method: method,
+                body: body === undefined ? undefined : JSON.stringify(body)
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return res.json();
+        }
+        const fbPatchState = (obj) => fbSend("PATCH", "/trangThai", obj);
+        const fbPatchMatchState = (obj) => fbSend("PATCH", "/match_state", obj);
+
+        // ==========================================
+        // CUSTOM POPUP
+        // ==========================================
+        function showCustomAlert(msg, title = "THÔNG BÁO") {
+            return new Promise(resolve => {
+                document.getElementById('custom-popup-title').innerHTML = title;
+                document.getElementById('custom-popup-msg').innerHTML = msg;
+                document.getElementById('custom-popup-btn-cancel').style.display = 'none';
+                document.getElementById('custom-popup-overlay').style.display = 'flex';
+
+                let btnOk = document.getElementById('custom-popup-btn-ok');
+                btnOk.onclick = function () {
+                    document.getElementById('custom-popup-overlay').style.display = 'none';
+                    resolve();
+                };
+            });
+        }
+
+        function showCustomConfirm(msg, title = "XÁC NHẬN") {
+            return new Promise(resolve => {
+                document.getElementById('custom-popup-title').innerHTML = title;
+                document.getElementById('custom-popup-msg').innerHTML = msg;
+                document.getElementById('custom-popup-btn-cancel').style.display = 'inline-block';
+                document.getElementById('custom-popup-overlay').style.display = 'flex';
+
+                let btnOk = document.getElementById('custom-popup-btn-ok');
+                let btnCancel = document.getElementById('custom-popup-btn-cancel');
+
+                btnOk.onclick = function () {
+                    document.getElementById('custom-popup-overlay').style.display = 'none';
+                    resolve(true);
+                };
+                btnCancel.onclick = function () {
+                    document.getElementById('custom-popup-overlay').style.display = 'none';
+                    resolve(false);
+                };
+            });
+        }
+
+        // ==========================================
+        // BIẾN GLOBAL
+        // ==========================================
+        let eliminatedTeamsLocal = [];
+        window.mysqlScoresAdmin = {};
+        window.teamMapping = {};
+        window.teamList = [];
+
+        let serverBlurredPieces = [];
+        let globalCauHoiV2 = {};
+        let currentSubmits = {};
+        let globalTrangThai = {};
+        let globalMatchState = {};
+        let lastQRenderSignature = "";
+
+        let adminTimerEnd = null;
+        let adminTimerPaused = false;
+        let adminTimerRemaining = 0;
+
+        function toggleEliminateTeam(idx) {
+            let el = document.getElementById(`team_row_${idx}`);
+            let btn = document.getElementById(`btn_loai_${idx}`);
+
+            if (eliminatedTeamsLocal.includes(idx)) {
+                eliminatedTeamsLocal = eliminatedTeamsLocal.filter(i => i !== idx);
+                el.classList.remove('team-eliminated');
+                if (btn) { btn.innerText = "LOẠI ĐỘI"; btn.style.background = "#6c757d"; }
+            } else {
+                eliminatedTeamsLocal.push(idx);
+                el.classList.add('team-eliminated');
+                if (btn) { btn.innerText = "KHÔI PHỤC"; btn.style.background = "#28a745"; }
+            }
+        }
+
+        function getRemainingMs() {
+        if (!globalTrangThai.cauHoiHienTai) return 0;
+        if (adminTimerPaused) return Math.max(0, adminTimerRemaining);
+        if (!adminTimerEnd) return 0;
+        return Math.max(0, adminTimerEnd - getServerNow());
+    }
+
+        function formatElapsedTime() {
+            const remMs = getRemainingMs();
+            if (!globalTrangThai.cauHoiHienTai) return "0.00s";
+            const elapsedSec = Math.max(0, (30000 - remMs) / 1000);
+            return `${elapsedSec.toFixed(2)}s`;
+        }
+
+        // ==========================================
+        // ĐỒNG HỒ & ÂM THANH (100ms)
+        // ==========================================
+        function updateAdminTimerUI() {
+            const curQ = String(globalTrangThai.cauHoiHienTai || "");
+            const remMs = getRemainingMs();
+            const qKeys = Object.keys(globalCauHoiV2);
+
+            if (!curQ || remMs <= 0 || isCurrentAnswerRevealed()) {
+                stopTimerSound();
+                if (!curQ) lastPlayedTimerKey = "";
+            } else if (adminTimerPaused) {
+                if (!SOUNDS.timer30.paused) SOUNDS.timer30.pause();
+            } else if (!isAdminSoundMuted) {
+                const timerKey = `${curQ}_${adminTimerEnd}`;
+                if (lastPlayedTimerKey !== timerKey) {
+                    lastPlayedTimerKey = timerKey;
+                    const elapsedSec = Math.max(0, (30000 - remMs) / 1000);
+                    try {
+                        SOUNDS.timer30.currentTime = elapsedSec;
+                        SOUNDS.timer30.play().catch(() => {});
+                    } catch (e) {}
+                } else if (SOUNDS.timer30.paused) {
+                    SOUNDS.timer30.play().catch(() => {});
+                }
+            }
+
+            qKeys.forEach(id => {
+                const badge = document.getElementById(`q_timer_${id}`);
+                const pauseBtn = document.getElementById(`btn_pause_${id}`);
+                if (!badge || !pauseBtn) return;
+
+                if (curQ === id) {
+                    if (remMs <= 0) {
+                        badge.innerText = "⏱ 0.0s";
+                        badge.className = "q-timer-badge timeup";
+                        pauseBtn.innerText = "⏸ Hết giờ";
+                        pauseBtn.classList.remove("is-paused");
+                        pauseBtn.disabled = true;
+                    } else if (adminTimerPaused) {
+                        badge.innerText = `⏸ ${(remMs / 1000).toFixed(1)}s`;
+                        badge.className = "q-timer-badge paused";
+                        pauseBtn.innerText = "▶ Tiếp tục";
+                        pauseBtn.classList.add("is-paused");
+                        pauseBtn.disabled = false;
+                    } else {
+                        badge.innerText = `⏱ ${(remMs / 1000).toFixed(1)}s`;
+                        badge.className = remMs <= 5000 ? "q-timer-badge urgent" : "q-timer-badge running";
+                        pauseBtn.innerText = "⏸ Tạm dừng";
+                        pauseBtn.classList.remove("is-paused");
+                        pauseBtn.disabled = false;
+                    }
+                } else {
+                    badge.innerText = "⏱ 30.0s";
+                    badge.className = "q-timer-badge";
+                    pauseBtn.innerText = "⏸ Tạm dừng";
+                    pauseBtn.classList.remove("is-paused");
+                    pauseBtn.disabled = true;
+                }
+            });
+        }
+
+        // ==========================================
+        // KHỞI TẠO & ĐỌC ĐIỂM /diemso
+        // ==========================================
+        async function initTeamMapping() {
+            try {
+                const res = await fetch(`${FB_DIEMSO}.json?_t=${Date.now()}`);
+                const data = (await res.json()) || {};
+                window.teamMapping = {};
+                window.teamList = [];
+                window.mysqlScoresAdmin = {};
+
+                Object.keys(data)
+                    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+                    .forEach(key => {
+                        const item = data[key] || {};
+                        const tenDoi = item.tendoi || key;
+                        window.teamMapping[tenDoi] = key;
+                        window.teamList.push(tenDoi);
+                        window.mysqlScoresAdmin[tenDoi] = Number(item.diem) || 0;
+                    });
+            } catch (e) {
+                console.error("Lỗi khởi tạo danh sách đội:", e);
+            }
+        }
+
+        async function fetchMySQLScores() {
+            try {
+                const res = await fetch(`${FB_DIEMSO}.json?_t=${Date.now()}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data) {
+                        let updatedScores = {};
+                        for (let teamName in window.teamMapping) {
+                            const key = window.teamMapping[teamName];
+                            const d = data[key];
+                            if (d && d.diem !== undefined && d.diem !== null) {
+                                updatedScores[teamName] = Number(d.diem) || 0;
+                            }
+                        }
+                        window.mysqlScoresAdmin = updatedScores;
+
+                        for (let i = 0; i < window.teamList.length; i++) {
+                            let scoreEl = document.getElementById(`score_${i}`);
+                            let teamNameEl = document.getElementById(`team_name_${i}`);
+                            if (scoreEl && teamNameEl) {
+                                let tName = teamNameEl.innerText.trim();
+                                if (window.mysqlScoresAdmin[tName] !== undefined) {
+                                    scoreEl.innerText = window.mysqlScoresAdmin[tName];
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Lỗi lấy điểm Firebase:", e);
+            } finally {
+                setTimeout(fetchMySQLScores, 1500);
+            }
+        }
+
+        // ==========================================
+        // ĐỌC DỮ LIỆU TỪ /vong2
+        // ==========================================
+        async function fetchSheetData() {
+            try {
+                const res = await fetch(`${FB_VONG2}.json?_t=${Date.now()}`);
+                const db = (await res.json()) || {};
+
+                let dsch = fbToObj(db.danhSachCauHoi);
+
+                if (db.question_bank) {
+                    const hn = fbToObj(db.question_bank.hangngang);
+                    Object.keys(hn).forEach(k => {
+                        const q = hn[k] || {};
+                        const dapAn = q.dapan || q.dapAn || q.danan || "";
+                        const cleanDapAn = String(dapAn).normalize('NFC').trim();
+                        dsch[k] = {
+                            id: k,
+                            noiDung: q.cauhoi || q.noiDung || "",
+                            dapAn: cleanDapAn,
+                            soKyTu: Number(q.sokytu || q.soKyTu) || cleanDapAn.replace(/\s/g, "").length || 0
+                        };
+                    });
+
+                    if (db.question_bank.tukhoa || db.question_bank.cauhoi_trungtam) {
+                        const tuKhoa = String(db.question_bank.tukhoa || "").normalize('NFC').trim();
+                        dsch["5"] = {
+                            id: "5",
+                            noiDung: db.question_bank.cauhoi_trungtam || "Hãy cho biết đây là chướng ngại vật nào?",
+                            dapAn: tuKhoa,
+                            soKyTu: Number(db.question_bank.so_kytu) || tuKhoa.replace(/\s/g, "").length || 0
+                        };
+                    }
+                }
+
+                if (db.question_bank && db.question_bank.link_anh && (!db.trangThai || !db.trangThai.linkAnh)) {
+                    db.trangThai = db.trangThai || {};
+                    db.trangThai.linkAnh = db.question_bank.link_anh;
+                }
+
+                const subs = fbToObj(db.submittedAnswers);
+                Object.keys(dsch).forEach(k => {
+                    const s = fbToObj(subs[k]);
+                    dsch[k].dananthisinh = Object.keys(s)
+                        .map(t => `[${t}|${s[t].answer}|${s[t].time}]`).join('-');
+                });
+
+                globalTrangThai = db.trangThai || {};
+                globalMatchState = db.match_state || {};
+                currentSubmits = subs;
+                globalCauHoiV2 = dsch;
+
+                if (!globalTrangThai.cauHoiHienTai) {
+                    adminTimerEnd = null;
+                    adminTimerPaused = false;
+                    adminTimerRemaining = 0;
+                } else {
+                    adminTimerPaused = (globalTrangThai.timerPaused === true || globalTrangThai.timerPaused === "true");
+                    if (adminTimerPaused) {
+                        adminTimerRemaining = Number(globalTrangThai.timerRemaining) || 0;
+                    } else if (globalTrangThai.timerEndTime) {
+                        adminTimerEnd = Number(globalTrangThai.timerEndTime);
+                    }
+                }
+
+                let btnShowAns = document.getElementById('btn-show-ans-v2');
+                if (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true") {
+                    btnShowAns.innerText = "🚫 ẨN ĐÁP ÁN KHÁN GIẢ";
+                    btnShowAns.style.background = "#6c757d";
+                } else {
+                    btnShowAns.innerText = "👁 HIỆN ĐÁP ÁN KHÁN GIẢ";
+                    btnShowAns.style.background = "#17a2b8";
+                }
+
+                if (globalTrangThai.blurredPieces !== undefined) {
+                    serverBlurredPieces = globalTrangThai.blurredPieces
+                        ? globalTrangThai.blurredPieces.toString().split(',').filter(x => x !== "")
+                        : [];
+                }
+
+                ['1', '2', '3', '4'].forEach(num => {
+                    let el = document.getElementById('btn-p' + num);
+                    if (el) {
+                        el.className = (globalTrangThai['manh' + num] === true || globalTrangThai['manh' + num] === "true") ? "p-btn opened" : "p-btn";
+                        if (serverBlurredPieces.includes(num)) el.classList.add('blurred');
+                    }
+                });
+
+                let p5El = document.getElementById('btn-p5');
+                if (p5El) {
+                    p5El.className = (globalTrangThai.manh5 === true || globalTrangThai.manh5 === "true") ? "p-center-btn opened" : "p-center-btn";
+                }
+
+                checkAndTriggerAnswerSound();
+                renderAdminUI();
+                updateAdminTimerUI();
+            } catch (error) {
+                console.error("Lỗi fetch API Vong 2:", error);
+            } finally {
+                setTimeout(fetchSheetData, 1500);
+            }
+        }
+
+        // ==========================================
+        // LƯU ĐÁP ÁN TRỰC TIẾP TRÊN MÁY TÍNH
+        // ==========================================
+
+        function buildEmptyDapanCacDoi() {
+            const emptyObj = {};
+            window.teamList.forEach(t => {
+                const col = window.teamMapping[t];
+                if (col) emptyObj[col] = { dapan: "", thoigian_nop: 0 };
+            });
+            return emptyObj;
+        }
+
+        async function clearCurrentAnswers() {
+            const isConfirm = await showCustomConfirm("Xóa đáp án hiện tại của tất cả các đội trên bảng?");
+            if (!isConfirm) return;
+
+            showLoading("Đang xóa đáp án hiện tại...");
+            try {
+                const curQ = String(globalTrangThai.cauHoiHienTai || "");
+                await fbSend("PUT", "/match_state/dapan_cacdoi", buildEmptyDapanCacDoi());
+                if (curQ) {
+                    await fbSend("DELETE", `/submittedAnswers/${curQ}`);
+                }
+                window.teamList.forEach((_, idx) => {
+                    const inp = document.getElementById(`ans_input_${idx}`);
+                    if (inp) inp.value = "";
+                });
+            } catch (e) {
+                console.error("Lỗi xóa đáp án:", e);
+            }
+            hideLoading();
+        }
+
+        // ==========================================
+        // RENDER UI CHÍNH
+        // ==========================================
+        function renderAdminUI() {
+            const teamListContainer = document.getElementById('team-list-container');
+            if (teamListContainer.innerHTML === "Đang tải...") teamListContainer.innerHTML = "";
+
+            const dapanCacDoi = (globalMatchState && globalMatchState.dapan_cacdoi) ? globalMatchState.dapan_cacdoi : {};
+            const currentQ = String(globalTrangThai.cauHoiHienTai || "");
+            const qData = currentQ ? globalCauHoiV2[currentQ] : null;
+            const correctAns = qData ? (qData.dapAn || "...") : "...";
+
+            window.teamList.forEach((t, idx) => {
+                let dbCol = window.teamMapping[t] || "";
+                let s = window.mysqlScoresAdmin[t] !== undefined ? window.mysqlScoresAdmin[t] : 0;
+
+                let ans = "";
+                let displayTime = "⏱ --";
+
+                // Ưu tiên đọc từ match_state.dapan_cacdoi
+                if (dbCol && dapanCacDoi[dbCol] && dapanCacDoi[dbCol].dapan) {
+                    ans = dapanCacDoi[dbCol].dapan;
+                    const tNop = dapanCacDoi[dbCol].thoigian_nop;
+                    displayTime = tNop ? `⏱ ${tNop}s` : "⏱ Đã lưu";
+                } else if (qData && qData.dananthisinh && qData.dananthisinh.includes(`[${t}|`)) {
+                    qData.dananthisinh.split('-').forEach(p => {
+                        let match = p.match(/\[(.*?)\|(.*?)\|(.*?)\]/);
+                        if (match && match[1] === t) {
+                            ans = match[2];
+                            displayTime = `⏱ ${match[3]}`;
+                        }
+                    });
+                }
+
+                const isCenterQ = (currentQ === "5");
+                const displayAnsText = ans || (isCenterQ ? "🎙 Trả lời trực tiếp" : "Chưa trả lời");
+                let rowEl = document.getElementById(`team_row_${idx}`);
+
+                if (!rowEl) {
+                    let newRow = document.createElement('div');
+                    newRow.className = 'team-card';
+                    newRow.id = `team_row_${idx}`;
+
+                    newRow.innerHTML = `
+                        <div class="team-header">
+                            <div style="display:flex; align-items:center;">
+                                <span class="team-name" id="team_name_${idx}">${t}</span>
+                                <button id="btn_loai_${idx}" class="btn-loai" onclick="toggleEliminateTeam(${idx})">LOẠI ĐỘI</button>
+                            </div>
+                            <span id="score_${idx}" class="team-score">${s}</span>
+                        </div>
+                        <div class="ans-box" id="ans_box_${idx}">
+                            <div class="ans-correct-line">ĐA đúng: <span id="correct_ans_${idx}" style="color:#333;">${correctAns}</span></div>
+                            <div class="ans-saved-line">
+                                <span>ĐA đội: <span id="ans_${idx}" class="ans-saved-val">${displayAnsText}</span></span>
+                                <span id="time_${idx}" class="time-text">${displayTime}</span>
+                            </div>
+                        </div>
+                        <div class="score-ctrl">
+                            <button class="btn-sub" onclick="changeScore('${t}', '${dbCol}', 'inp_${idx}', -1, 'score_${idx}')">-</button>
+                            <input type="number" id="inp_${idx}" value="10" step="10" class="score-input" onclick="this.select()">
+                            <button class="btn-add" onclick="changeScore('${t}', '${dbCol}', 'inp_${idx}', 1, 'score_${idx}')">+</button>
+                        </div>`;
+                    teamListContainer.appendChild(newRow);
+                } else {
+                    document.getElementById(`score_${idx}`).innerText = s;
+                    const cAnsEl = document.getElementById(`correct_ans_${idx}`);
+                    if (cAnsEl) cAnsEl.innerText = correctAns;
+
+                    const ansEl = document.getElementById(`ans_${idx}`);
+                    if (ansEl) ansEl.innerText = displayAnsText;
+
+                    const timeEl = document.getElementById(`time_${idx}`);
+                    if (timeEl) timeEl.innerText = displayTime;
+
+                    // Chỉ đồng bộ input nếu admin KHÔNG đang gõ vào ô đó
+                    const inpEl = document.getElementById(`ans_input_${idx}`);
+                    if (inpEl && document.activeElement !== inpEl && ans && inpEl.value === "") {
+                        inpEl.value = ans;
+                    }
+
+                    let btnLoai = document.getElementById(`btn_loai_${idx}`);
+                    if (eliminatedTeamsLocal.includes(idx)) {
+                        rowEl.classList.add('team-eliminated');
+                        if (btnLoai) { btnLoai.innerText = "KHÔI PHỤC"; btnLoai.style.background = "#28a745"; }
+                    } else {
+                        rowEl.classList.remove('team-eliminated');
+                        if (btnLoai) { btnLoai.innerText = "LOẠI ĐỘI"; btnLoai.style.background = "#6c757d"; }
+                    }
+                }
+            });
+
+            const sortedKeys = Object.keys(globalCauHoiV2).sort((a, b) =>
+                a.localeCompare(b, undefined, { numeric: true })
+            );
+
+            const sig = JSON.stringify({
+                cur: globalTrangThai.cauHoiHienTai || "",
+                blur: serverBlurredPieces,
+                qs: sortedKeys.map(k => ({
+                    k,
+                    n: globalCauHoiV2[k]?.noiDung,
+                    a: globalCauHoiV2[k]?.dapAn,
+                    s: globalCauHoiV2[k]?.soKyTu
+                }))
+            });
+
+            if (sig === lastQRenderSignature) return;
+            lastQRenderSignature = sig;
+
+            const qList = document.getElementById('question-list');
+            if (sortedKeys.length === 0) {
+                qList.innerHTML = `<div style="color:#64748b; padding:12px;">Chưa có câu hỏi nào trên Firebase (/vong2).</div>`;
+                return;
+            }
+
+            let qHtml = "";
+            sortedKeys.forEach(id => {
+                let qDataItem = globalCauHoiV2[id];
+                if (!qDataItem) return;
+
+                let ans = qDataItem.dapAn || qDataItem.DapAn || "";
+                let len = Number(qDataItem.soKyTu || qDataItem.SoKyTu) || (ans ? ans.toString().normalize('NFC').replace(/\s/g, "").length : 0);
+                let txt = qDataItem.noiDung || qDataItem.NoiDung || "";
+
+                let bg = (id === String(globalTrangThai.cauHoiHienTai)) ? "background:#e6f7ff; border-color:#007bff;" : "";
+                let label = (id === "5") ? `Câu Trung Tâm - 🎙 Trực tiếp` : `Hàng ${id} - 💻 Máy tính`;
+                let isBlurred = serverBlurredPieces.includes(id);
+
+                qHtml += `
+                    <div class="q-item ${isBlurred ? 'blurred' : ''}" id="q_item_${id}" style="${bg}">
+                        <div class="q-item-header">
+                            <b>${label} (${len} ký tự):</b>
+                            <span class="q-timer-badge" id="q_timer_${id}">⏱ 30.0s</span>
+                        </div>
+                        <div>${txt}</div>
+                        <div style="color:green; font-weight:bold; margin-top:4px;">ĐA chuẩn: ${ans}</div>
+                        <div class="q-actions">
+                            <button class="btn-show" onclick="playQuestionV2('${id}')">Phát 30s</button>
+                            <button class="btn-pause" id="btn_pause_${id}" onclick="togglePauseTimer('${id}')" disabled>⏸ Tạm dừng</button>
+                            <button class="btn-ans-q" onclick="showAnswerForQuestion('${id}')">🎉 Đáp án</button>
+                            <button class="btn-blur" onclick="toggleBlurPiece('${id}')">${isBlurred ? 'Bỏ làm mờ' : 'Làm mờ mảnh'}</button>
+                            <button class="btn-review" onclick="reviewAnswers('${id}')">Xem lại đáp án</button>
+                        </div>
+                    </div>`;
+            });
+            qList.innerHTML = qHtml;
+            updateAdminTimerUI();
+        }
+
+        // ==========================================
+        // POPUP XEM LẠI ĐÁP ÁN
+        // ==========================================
+        function closeReviewPopup() {
+            document.getElementById('review-popup-overlay').style.display = 'none';
+        }
+
+        function reviewAnswers(id) {
+            let qData = globalCauHoiV2[String(id)];
+            if (!qData) return;
+
+            const titleLabel = String(id) === "5" ? "CÂU TRUNG TÂM" : `HÀNG ${id}`;
+            document.getElementById('review-title').innerHTML = `XEM LẠI ĐÁP ÁN - ${titleLabel} <br><span style="font-size:1.3rem; color:#444; font-weight:normal;">ĐA CHUẨN: <b>${qData.dapAn}</b></span>`;
+
+            let rawAns = qData.dananthisinh || "";
+            let parsedAnswers = {};
+
+            if (rawAns) {
+                rawAns.split('-').forEach(p => {
+                    let match = p.match(/\[(.*?)\|(.*?)\|(.*?)\]/);
+                    if (match) parsedAnswers[match[1]] = { ans: match[2], time: match[3] };
+                });
+            }
+
+            let html = '';
+            window.teamList.forEach((team, idx) => {
+                let teamData = parsedAnswers[team] || { ans: "Chưa trả lời", time: "--" };
+                let currentScore = window.mysqlScoresAdmin[team] || 0;
+                let ansColor = teamData.ans === "Chưa trả lời" ? "#6c757d" : "#0056b3";
+
+                html += `
+                    <div class="review-card">
+                        <h4>${team}</h4>
+                        <div style="font-size:1.35rem; font-weight:bold; color:${ansColor}; min-height: 30px;">${teamData.ans}</div>
+                        <div style="color:#28a745; margin: 10px 0 15px 0; font-weight:bold;">⏱ ${teamData.time}</div>
+                        <hr style="border: 1px solid #ddd; margin-bottom:15px;">
+                        <div style="margin-bottom:10px; font-size:1.2rem; color:#444;">Điểm hiện tại: <b>${currentScore}</b></div>
+                        <div style="margin-bottom:15px; display:flex; justify-content:center; align-items:center; gap:8px; font-size:1.2rem; color:#444;">
+                            Cộng: <input type="number" id="rev_inp_${idx}" value="10" step="10" oninput="updateExpectedScore(${idx}, ${currentScore})" style="width:70px; text-align:center; padding:5px; border-radius:6px; border:1px solid #007bff; font-weight:bold; font-size:1.2rem;">
+                        </div>
+                        <div style="margin-bottom:10px; font-size:1.3rem; color:#dc3545; font-weight:bold;">Dự kiến: <span id="rev_expected_${idx}">${currentScore + 10}</span></div>
+                    </div>`;
+            });
+
+            document.getElementById('review-popup-content').innerHTML = html;
+            document.getElementById('review-popup-overlay').style.display = 'flex';
+        }
+
+        function updateExpectedScore(idx, currentScore) {
+            let val = parseInt(document.getElementById(`rev_inp_${idx}`).value) || 0;
+            document.getElementById(`rev_expected_${idx}`).innerText = currentScore + val;
+        }
+
+        // ==========================================
+        // GHI TRẠNG THÁI LÊN FIREBASE
+        // ==========================================
+        async function showAnswerForQuestion(id) {
+            const strId = String(id);
+            showLoading("Đang hiện đáp án & phát nhạc chào mừng...");
+            try {
+                const triggerTs = Date.now();
+                globalTrangThai.cauHoiHienTai = strId;
+                globalTrangThai.showAnswer = true;
+                globalTrangThai.answerTrigger = triggerTs;
+
+                if (strId === "5") {
+                    globalTrangThai.manh5 = true;
+                    await fbPatchState({
+                        cauHoiHienTai: "5",
+                        showAnswer: true,
+                        answerTrigger: triggerTs,
+                        manh1: true, manh2: true, manh3: true, manh4: true, manh5: true,
+                        blurredPieces: ""
+                    });
+                    serverBlurredPieces = [];
+                } else {
+                    const patchObj = {
+                        cauHoiHienTai: strId,
+                        showAnswer: true,
+                        answerTrigger: triggerTs
+                    };
+                    if (["1", "2", "3", "4"].includes(strId)) {
+                        globalTrangThai["manh" + strId] = true;
+                        patchObj["manh" + strId] = true;
+                    }
+                    await fbPatchState(patchObj);
+                }
+
+                await fbSend("PATCH", "/match_state/config", { show_dapan: true });
+                checkAndTriggerAnswerSound();
+                updateAdminTimerUI();
+            } catch (e) {
+                console.error("Lỗi hiện đáp án câu hỏi:", e);
+            }
+            hideLoading();
+        }
+
+        async function toggleShowAnswerV2() {
+            showLoading("Đang xử lý trạng thái đáp án...");
+            try {
+                let willShow = !(globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true");
+                let curQ = String(globalTrangThai.cauHoiHienTai || "");
+                const triggerTs = willShow ? Date.now() : 0;
+
+                globalTrangThai.showAnswer = willShow;
+                globalTrangThai.answerTrigger = triggerTs;
+
+                if (willShow && curQ === "5") {
+                    globalTrangThai.manh5 = true;
+                    await fbPatchState({
+                        showAnswer: true,
+                        answerTrigger: triggerTs,
+                        manh1: true, manh2: true, manh3: true, manh4: true, manh5: true,
+                        blurredPieces: ""
+                    });
+                    serverBlurredPieces = [];
+                } else if (willShow && ["1", "2", "3", "4"].includes(curQ)) {
+                    globalTrangThai["manh" + curQ] = true;
+                    await fbPatchState({
+                        showAnswer: true,
+                        answerTrigger: triggerTs,
+                        ["manh" + curQ]: true
+                    });
+                } else {
+                    await fbPatchState({ showAnswer: willShow, answerTrigger: triggerTs });
+                }
+
+                await fbSend("PATCH", "/match_state/config", { show_dapan: willShow });
+                checkAndTriggerAnswerSound();
+                updateAdminTimerUI();
+            } catch (e) {}
+            hideLoading();
+        }
+
+        async function closeQuestionV2() {
+            let isConfirm = await showCustomConfirm("XÁC NHẬN:<br>Bạn có chắc chắn muốn <b>ĐÓNG</b> câu hỏi hiện tại và reset đồng hồ?");
+            if (!isConfirm) return;
+
+            showLoading("Đang đóng câu hỏi...");
+            try {
+                adminTimerEnd = null;
+                adminTimerPaused = false;
+                adminTimerRemaining = 0;
+                globalTrangThai.cauHoiHienTai = "";
+                globalTrangThai.showAnswer = false;
+                lastPlayedTimerKey = "";
+                lastAnswerSoundKey = "";
+                stopAllSounds();
+
+                await fbPatchState({
+                    cauHoiHienTai: "",
+                    showAnswer: false,
+                    timerEndTime: 0,
+                    timerPaused: false,
+                    timerRemaining: 0
+                });
+                await fbPatchMatchState({
+                    cauhoihientai: "PREPARE",
+                    thoigian: 0
+                });
+                await fbSend("PATCH", "/match_state/config", { show_dapan: false });
+                updateAdminTimerUI();
+            } catch (e) {}
+            hideLoading();
+        }
+
+        async function playQuestionV2(id) {
+            const strId = String(id);
+            showLoading("Đang phát câu hỏi & làm mới đáp án...");
+            try {
+                const endTime = getServerNow() + 30000;
+                const emptyAnswers = buildEmptyDapanCacDoi();
+
+                adminTimerEnd = endTime;
+                adminTimerPaused = false;
+                adminTimerRemaining = 30000;
+                globalTrangThai.cauHoiHienTai = strId;
+                globalTrangThai.showAnswer = false;
+                lastAnswerSoundKey = "";
+
+                // Làm mới dữ liệu đáp án ngay tại local
+                globalMatchState.dapan_cacdoi = emptyAnswers;
+                if (currentSubmits[strId]) delete currentSubmits[strId];
+                if (globalCauHoiV2[strId]) globalCauHoiV2[strId].dananthisinh = "";
+
+                // Xóa trắng ô nhập liệu và chữ hiển thị trên giao diện Admin
+                window.teamList.forEach((_, idx) => {
+                    const inp = document.getElementById(`ans_input_${idx}`);
+                    if (inp) inp.value = "";
+                });
+
+                // Ghi đồng thời lên Firebase: trạng thái, reset dapan_cacdoi và xóa lịch sử câu này
+                await Promise.all([
+                    fbPatchState({
+                        cauHoiHienTai: strId,
+                        showAnswer: false,
+                        timerEndTime: endTime,
+                        timerPaused: false,
+                        timerRemaining: 30000
+                    }),
+                    fbPatchMatchState({
+                        cauhoihientai: strId,
+                        thoigian: 30,
+                        dapan_cacdoi: emptyAnswers,
+                        config: { show_dapan: false }
+                    }),
+                    fbSend("DELETE", `/submittedAnswers/${strId}`)
+                ]);
+
+                renderAdminUI();
+                updateAdminTimerUI();
+            } catch (error) {
+                console.error("Lỗi gửi câu hỏi:", error);
+                await showCustomAlert("Lỗi khi kết nối tới hệ thống: " + error.message);
+            }
+            hideLoading();
+        }
+
+        async function togglePauseTimer(id) {
+            if (String(globalTrangThai.cauHoiHienTai) !== String(id)) return;
+            const remMs = getRemainingMs();
+            if (remMs <= 0) return;
+
+            showLoading(adminTimerPaused ? "Đang tiếp tục đồng hồ..." : "Đang tạm dừng đồng hồ...");
+            try {
+                if (!adminTimerPaused) {
+                    adminTimerPaused = true;
+                    adminTimerRemaining = remMs;
+                    await fbPatchState({
+                        timerPaused: true,
+                        timerRemaining: remMs
+                    });
+                } else {
+                    const newEnd = getServerNow() + adminTimerRemaining;                    adminTimerPaused = false;
+                    adminTimerEnd = newEnd;
+                    await fbPatchState({
+                        timerPaused: false,
+                        timerEndTime: newEnd,
+                        timerRemaining: adminTimerRemaining
+                    });
+                }
+                updateAdminTimerUI();
+            } catch (e) {
+                console.error("Lỗi tạm dừng đồng hồ:", e);
+            }
+            hideLoading();
+        }
+
+        async function toggleBlurPiece(id) {
+            let strId = id.toString();
+            let isBlurred = serverBlurredPieces.includes(strId);
+            if (!isBlurred) {
+                let isConfirm = await showCustomConfirm("XÁC NHẬN:<br>Bạn muốn LÀM MỜ (khóa) câu hỏi và mảnh ghép số <b style='color:#dc3545'>" + strId + "</b> vì không có đội nào trả lời đúng?");
+                if (!isConfirm) return;
+                serverBlurredPieces.push(strId);
+            } else {
+                serverBlurredPieces = serverBlurredPieces.filter(x => x !== strId);
+            }
+
+            showLoading("Đang xử lý khóa/mở khóa mảnh...");
+            try {
+                let blurredStr = serverBlurredPieces.join(',');
+                await fbPatchState({ blurredPieces: blurredStr });
+            } catch (e) {}
+            hideLoading();
+        }
+
+        async function resetBlurAll() {
+            let isConfirm = await showCustomConfirm("XÁC NHẬN TẠO TRẬN MỚI:<br>Xóa toàn bộ trạng thái làm mờ, đóng tất cả mảnh ghép và xóa đáp án đã nộp?");
+            if (isConfirm) {
+                showLoading("Đang dọn dẹp hệ thống...");
+                try {
+                    adminTimerEnd = null;
+                    adminTimerPaused = false;
+                    adminTimerRemaining = 0;
+                    globalTrangThai.cauHoiHienTai = "";
+                    globalTrangThai.showAnswer = false;
+                    lastPlayedTimerKey = "";
+                    lastAnswerSoundKey = "";
+                    stopAllSounds();
+
+                    window.teamList.forEach((_, idx) => {
+                        const inp = document.getElementById(`ans_input_${idx}`);
+                        if (inp) inp.value = "";
+                    });
+
+                    await fbPatchState({
+                        cauHoiHienTai: "",
+                        blurredPieces: "",
+                        showAnswer: false,
+                        answerTrigger: 0,
+                        timerEndTime: 0,
+                        timerPaused: false,
+                        timerRemaining: 0,
+                        manh1: false, manh2: false, manh3: false, manh4: false, manh5: false
+                    });
+                    await fbPatchMatchState({
+                        cauhoihientai: "PREPARE",
+                        thoigian: 0,
+                        dapan_cacdoi: buildEmptyDapanCacDoi(),
+                        config: { show_dapan: false }
+                    });
+                    await fbSend("DELETE", "/submittedAnswers");
+                    serverBlurredPieces = [];
+                    updateAdminTimerUI();
+                } catch (e) {}
+                hideLoading();
+            }
+        }
+
+        async function togglePiece(pid) {
+            let num = pid.replace('p', '');
+            if (pid === 'p5') {
+                let isConfirm = await showCustomConfirm("XÁC NHẬN:<br>Mở <b>HÌNH TRUNG TÂM</b> và <b>BỎ LÀM MỜ</b> toàn bộ các mảnh ghép (không hiện đáp án)?");
+                if (!isConfirm) return;
+
+                showLoading("Đang mở hình trung tâm & bỏ làm mờ...");
+                try {
+                    globalTrangThai.manh1 = true;
+                    globalTrangThai.manh2 = true;
+                    globalTrangThai.manh3 = true;
+                    globalTrangThai.manh4 = true;
+                    globalTrangThai.manh5 = true;
+
+                    await fbPatchState({
+                        manh1: true, manh2: true, manh3: true, manh4: true, manh5: true,
+                        blurredPieces: ""
+                    });
+                    serverBlurredPieces = [];
+                } catch (e) {}
+                hideLoading();
+            } else {
+                showLoading("Đang lật mảnh ghép...");
+                let el = document.getElementById('btn-' + pid);
+                let targetState = !el.classList.contains('opened');
+                try {
+                    globalTrangThai["manh" + num] = targetState;
+                    await fbPatchState({ ["manh" + num]: targetState });
+                } catch (e) {}
+                hideLoading();
+            }
+        }
+
+        // ==========================================
+        // CẬP NHẬT ĐIỂM
+        // ==========================================
+        async function changeScore(teamName, dbCol, inputId, multiplier, scoreId) {
+            let val = parseInt(document.getElementById(inputId).value);
+            if (isNaN(val) || val <= 0) {
+                await showCustomAlert('Vui lòng nhập số điểm hợp lệ!');
+                return;
+            }
+            if (!dbCol || dbCol === "") {
+                await showCustomAlert("Chưa có ánh xạ đội này! Vui lòng tải lại trang.");
+                return;
+            }
+
+            let points = val * multiplier;
+            showLoading(`Đang cập nhật điểm...`);
+            try {
+                let getRes = await fetch(`${FB_DIEMSO}/${dbCol}/diem.json?_t=${Date.now()}`);
+                if (!getRes.ok) throw new Error("HTTP " + getRes.status);
+                let currentScore = parseInt(await getRes.json()) || 0;
+                let newScore = currentScore + points;
+
+                let putRes = await fetch(`${FB_DIEMSO}/${dbCol}/diem.json`, {
+                    method: "PUT",
+                    body: JSON.stringify(newScore)
+                });
+                if (!putRes.ok) throw new Error("HTTP " + putRes.status);
+
+                let scoreEl = document.getElementById(scoreId);
+                if (scoreEl) scoreEl.innerText = newScore;
+                window.mysqlScoresAdmin[teamName] = newScore;
+            } catch (e) {
+                console.error("Lỗi cập nhật điểm:", e);
+                await showCustomAlert("Không thể cập nhật điểm, vui lòng kiểm tra kết nối mạng!");
+            }
+            hideLoading();
+        }
+
+        // ==========================================
+        // CHUYỂN TRANG & LOADING
+        // ==========================================
+        async function goToRound1() {
+            let isConfirm = await showCustomConfirm("Bạn có chắc chắn muốn quay về <b>Vòng 1</b>?<br>Màn hình Khán giả cũng sẽ tự động chuyển trang.");
+            if (isConfirm) {
+                window.location.href = "../vong1_rieng/";
+            }
+        }
+
+        function goToRound3() {
+            window.location.href = "../vong3/";
+        }
+
+        function showLoading(msg = "Đang xử lý...") { document.getElementById('loading-text').innerText = msg; document.getElementById('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+        window.onload = async function () {
+            setInterval(updateAdminTimerUI, 100);
+            await initFirebaseConfig();
+            await syncServerClock(FB_VONG2);
+            await initTeamMapping();
+            fetchMySQLScores();
+            fetchSheetData();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympia - Vòng 4: Về Đích (Thí sinh)</title>
+    <script>
+/* =====================================================================
+   V4 Core - Đọc riêng api_url từ ../../api/vong4.json và ../../api/diemso.json
+   ===================================================================== */
+window.V4 = (function () {
+  "use strict";
+  var CFG_ROUND = "../../api/vong4.json";
+  var CFG_SCORE = "../../api/diemso.json";
+  var ROUND_URL = "";
+  var SCORE_URL = "";
+  var cfgError = null;
+
+  function stripJson(u) {
+    return String(u || "").trim().replace(/\.json(\?.*)?$/i, "").replace(/\/$/, "");
+  }
+
+  var ready = (async function () {
+    try {
+      var results = await Promise.all([
+        fetch(CFG_ROUND + "?_t=" + Date.now()),
+        fetch(CFG_SCORE + "?_t=" + Date.now())
+      ]);
+      var r1 = results[0], r2 = results[1];
+
+      if (!r1.ok) throw new Error("Không đọc được " + CFG_ROUND + " (HTTP " + r1.status + ")");
+      var c1 = await r1.json();
+      if (!c1 || !c1.api_url) throw new Error("File " + CFG_ROUND + " thiếu trường api_url");
+      ROUND_URL = stripJson(c1.api_url);
+
+      if (r2.ok) {
+        var c2 = await r2.json();
+        if (c2 && c2.api_url) SCORE_URL = stripJson(c2.api_url);
+      }
+      if (!SCORE_URL) {
+        SCORE_URL = ROUND_URL.replace(/\/[^\/]+$/, "") + "/diemso";
+      }
+    } catch (e) {
+      cfgError = e;
+    }
+  })();
+
+  async function send(path, method, body) {
+    await ready;
+    if (!ROUND_URL) throw (cfgError || new Error("Chưa cấu hình api_url"));
+
+    var base, sub = "";
+    if (path === "diemso" || path.indexOf("diemso/") === 0) {
+      base = SCORE_URL;
+      sub = path.slice(6);
+    } else if (path === "vong4" || path.indexOf("vong4/") === 0) {
+      base = ROUND_URL;
+      sub = path.slice(5);
+    } else {
+      base = ROUND_URL.replace(/\/[^\/]+$/, "");
+      sub = "/" + path;
+    }
+
+    var o = { method: method };
+    if (body !== undefined) {
+      o.body = JSON.stringify(body);
+      o.headers = { "Content-Type": "application/json" };
+    }
+    var url = base + sub + ".json" + (method === "GET" ? "?_t=" + Date.now() : "");
+    var r = await fetch(url, o);
+    if (!r.ok) throw new Error("Firebase lỗi " + r.status + " (" + path + ")");
+    return r.json();
+  }
+
+  var nat = function (a, b) { return String(a).localeCompare(String(b), undefined, { numeric: true }); };
+
+  function teamsFrom(d) {
+    return Object.keys(d || {}).sort(nat).map(function (k, i) {
+      var v = d[k] || {};
+      return { doi: k, tendoi: v.tendoi || ("Đội " + (i + 1)), diem: parseInt(v.diem) || 0 };
+    });
+  }
+
+  function esc(s) {
+    return String(s === undefined || s === null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  return {
+    get: function (p) { return send(p, "GET"); },
+    patch: function (p, b) { return send(p, "PATCH", b); },
+    send: send,
+    teamsFrom: teamsFrom,
+    esc: esc
+  };
+})();
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Roboto:wght@500;700&display=swap');
+        body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; background: radial-gradient(circle at center, #002244 0%, #000011 100%); color: white; height: 100vh; overflow: hidden; }
+
+        #setup-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            background: radial-gradient(circle at center, #002244 0%, #000011 100%);
+        }
+        .setup-title { font-size: 3.5rem; color: #ffd700; font-family: 'Montserrat', sans-serif; margin-bottom: 40px; text-shadow: 0 0 20px rgba(255,215,0,0.5); text-align: center; }
+        .role-btn { font-size: 1.8rem; padding: 20px 40px; margin: 10px; border-radius: 15px; border: 3px solid #56ccf2; background: rgba(0, 34, 68, 0.8); color: white; cursor: pointer; transition: 0.3s; font-family: 'Montserrat', sans-serif; font-weight: bold; }
+        .role-btn:hover { background: #56ccf2; color: #000; transform: scale(1.05); box-shadow: 0 0 20px #56ccf2; }
+
+        #main-game {
+            display: none;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform-origin: top left;
+        }
+
+        .header { padding: 15px 50px; background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,34,68,0.8) 50%, rgba(0,0,0,0.8) 100%); border-bottom: 3px solid #ffd700; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        .title { font-family: 'Montserrat', sans-serif; font-size: 2.5rem; color: #fff; text-transform: uppercase; letter-spacing: 2px; }
+        .team-name { font-family: 'Montserrat', sans-serif; color: #ffd700; font-size: 2.5rem; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8); display: flex; align-items: center; gap: 15px; }
+        .reset-btn { font-size: 1.5rem; cursor: pointer; opacity: 0.5; transition: 0.2s; }
+        .reset-btn:hover { opacity: 1; transform: rotate(180deg); }
+        .main-content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; overflow: hidden; }
+
+        .question-box { background: rgba(0, 15, 30, 0.85); border: 3px solid #56ccf2; border-radius: 20px; padding: 25px 40px; width: 95%; max-width: 1480px; font-size: 2.6rem; line-height: 1.5; box-shadow: 0 0 30px rgba(86, 204, 242, 0.2), inset 0 0 20px rgba(86, 204, 242, 0.1); margin-bottom: 15px; text-align: center; position: relative; box-sizing: border-box; }
+
+        .tags-container { margin-bottom: 18px; }
+        .info-tag { display: inline-block; background: linear-gradient(135deg, #0052cc, #003d99); padding: 10px 25px; border-radius: 30px; font-size: 1.5rem; margin: 0 10px; font-family: 'Montserrat', sans-serif; text-transform: uppercase; border: 1px solid #56ccf2; }
+        .star-tag { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; border: 2px solid #fff; box-shadow: 0 0 25px #ffd700; animation: pulseStar 1.5s infinite; }
+
+        /* Bố cục chia đôi: Câu hỏi bên trái - Khung ảnh bên phải */
+        .q-split-container {
+            display: flex;
+            gap: 35px;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            text-align: left;
+            width: 100%;
+        }
+        .q-left-panel {
+            flex: 1.15;
+            text-align: left;
+            font-weight: 700;
+            font-size: 2.3rem;
+            line-height: 1.45;
+            white-space: pre-wrap;
+        }
+        .q-right-panel {
+            flex: 0.85;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.45);
+            border: 3px solid #56ccf2;
+            border-radius: 16px;
+            padding: 12px;
+            min-height: 260px;
+            box-shadow: inset 0 0 20px rgba(86, 204, 242, 0.25), 0 8px 25px rgba(0,0,0,0.5);
+        }
+        .q-image {
+            max-width: 100%;
+            max-height: 340px;
+            border-radius: 10px;
+            object-fit: contain;
+            background: #ffffff;
+            padding: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+        .img-error-box {
+            color: #ffd700;
+            font-size: 1.3rem;
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #ff4b2b;
+            border-radius: 10px;
+            background: rgba(255, 75, 43, 0.15);
+            line-height: 1.4;
+        }
+
+        /* ================= KHUNG ĐÁP ÁN DÀI (PHƯƠNG ÁN 1) ================= */
+        .ans-long-heading {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1.9rem;
+            font-weight: 900;
+            color: #28d160;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+        }
+        .ans-long-box {
+            background: rgba(0, 0, 0, 0.65);
+            border: 3px solid #28a745;
+            border-radius: 16px;
+            padding: 24px 36px;
+            color: #ffd700;
+            font-weight: 800;
+            font-style: normal;
+            text-align: left;
+            white-space: pre-wrap;
+            line-height: 1.48;
+            box-shadow: 0 0 25px rgba(40, 167, 69, 0.55);
+            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .footer { display: flex; justify-content: space-between; align-items: flex-end; padding: 15px 80px 30px 80px; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%); }
+        .stat-box { display: flex; flex-direction: column; align-items: center; }
+        .stat-label { font-size: 1.8rem; color: #a0c4ff; letter-spacing: 3px; font-family: 'Montserrat', sans-serif; margin-bottom: 5px; text-transform: uppercase; }
+        .stat-value { font-family: 'Montserrat', sans-serif; font-size: 7.2rem; font-weight: 800; color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 2px 2px 0px #000; line-height: 1; }
+        .timer { color: #ff4b2b; text-shadow: 0 0 30px rgba(255, 75, 43, 0.9), 2px 2px 0px #000; transition: color 0.3s; }
+
+        .q-grids-client { display: flex; gap: 40px; justify-content: center; margin-top: 10px; }
+        .q-col-client { flex: 1; padding: 25px; border-radius: 15px; border: 4px solid; background: rgba(255,255,255,0.95); max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        .q-col-20-client { border-color: #28a745; }
+        .q-col-30-client { border-color: #dc3545; }
+        .q-col-title-client { text-align: center; font-size: 2rem; font-weight: 900; margin-bottom: 25px; text-transform: uppercase; }
+        .q-col-20-client .q-col-title-client { color: #28a745; }
+        .q-col-30-client .q-col-title-client { color: #dc3545; }
+        .q-btn-grid-client { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .q-btn-client { padding: 20px 0; font-size: 2.2rem; font-weight: 900; border-radius: 10px; text-align: center; color: white; box-shadow: 0 5px 10px rgba(0,0,0,0.3); }
+        .q-btn-20-client { background: #28a745; }
+        .q-btn-30-client { background: #dc3545; }
+
+        .q-btn-client.used { opacity: 0.25; filter: grayscale(100%); }
+
+        @keyframes pulseStar { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        .msg-box { font-size: 2.4rem; color: #a0c4ff; font-style: italic; }
+        .ans-short-box { color: #ffd700; font-size: 3.8rem; font-style: normal; font-weight: 900; background: rgba(0,0,0,0.7); padding: 12px 40px; border-radius: 15px; display: inline-block; margin-top: 10px; border: 3px solid #28a745; box-shadow: 0 0 25px rgba(40,167,69,0.6); }
+    </style>
+</head>
+<body>
+    <div id="setup-screen">
+        <div class="setup-title">XÁC NHẬN THIẾT BỊ MÁY TRẠM</div>
+        <div id="role-buttons">
+            <button class="role-btn" onclick="selectRole('Đội 1')">MÁY ĐỘI 1</button>
+            <button class="role-btn" onclick="selectRole('Đội 2')">MÁY ĐỘI 2</button>
+            <button class="role-btn" onclick="selectRole('Đội 3')">MÁY ĐỘI 3</button>
+            <button class="role-btn" onclick="selectRole('Đội 4')">MÁY ĐỘI 4</button>
+        </div>
+    </div>
+
+    <div id="main-game">
+        <div class="header">
+            <div class="title">VÒNG 4: VỀ ĐÍCH</div>
+            <div class="team-name"><span id="display-team-name">Đang tải...</span><span class="reset-btn" onclick="resetRole()" title="Đổi máy khác">🔄</span></div>
+        </div>
+        <div class="main-content">
+            <div class="question-box" id="q-box"><div class="msg-box">Đang kết nối tín hiệu Firebase...</div></div>
+            <div id="action-area" style="width: 100%; display: flex; justify-content: center; flex-direction: column; align-items: center;"></div>
+        </div>
+        <div class="footer">
+            <div class="stat-box"><span class="stat-label" id="score-label-client">ĐIỂM CỦA BẠN</span><span class="stat-value" id="current-score">0</span></div>
+            <div class="stat-box"><span class="stat-label">THỜI GIAN</span><span class="stat-value timer" id="time-left">0s</span></div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase: vong4/{question_bank, TrangThaiV4}, diemso/{doiX: {diem, tendoi}}
+        const esc = V4.esc;
+
+        const roleIndexMap = {
+            'Đội 1': 0,
+            'Đội 2': 1,
+            'Đội 3': 2,
+            'Đội 4': 3
+        };
+
+        window.myTeam = localStorage.getItem("olympia_team");
+        window.myTeamIndex = window.myTeam && roleIndexMap[window.myTeam] !== undefined ? roleIndexMap[window.myTeam] : null;
+        window.currentMyTeamName = window.myTeam || "";
+        window.teams = [];
+
+        window.currentStatus = "";
+        window.lastTimerTrigger = 0;
+        window.localEndTime = null;
+        let pollingStarted = false;
+
+        function setHTML(el, html) {
+            if (!el || el._lastHtml === html) return;
+            el.innerHTML = html;
+            el._lastHtml = html;
+        }
+
+        // ================= TỰ ĐỘNG CO GIÃN THEO MỌI MÀN HÌNH =================
+        function autoScaleStage() {
+            const BASE_W = 1920;
+            const BASE_H = 1080;
+            const scale = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H);
+            const w = (window.innerWidth / scale) + 'px';
+            const h = (window.innerHeight / scale) + 'px';
+            const tf = `scale(${scale})`;
+
+            ['setup-screen', 'main-game'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.style.width = w;
+                el.style.height = h;
+                el.style.transform = tf;
+            });
+        }
+
+        window.addEventListener('resize', autoScaleStage);
+        autoScaleStage();
+
+        window.onload = function() {
+            autoScaleStage();
+            if (window.myTeam !== null && window.myTeam !== "") {
+                startGameUI();
+            } else {
+                document.getElementById('setup-screen').style.display = 'flex';
+                document.getElementById('main-game').style.display = 'none';
+            }
+            setInterval(updateTimer, 100);
+        };
+
+        window.selectRole = function(role) {
+            window.myTeam = role;
+            window.myTeamIndex = roleIndexMap[role] !== undefined ? roleIndexMap[role] : 0;
+            window.currentMyTeamName = role;
+            localStorage.setItem("olympia_team", role);
+            startGameUI();
+        };
+
+        window.resetRole = function() {
+            localStorage.removeItem("olympia_team");
+            location.reload();
+        };
+
+        function startGameUI() {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('main-game').style.display = 'flex';
+            document.getElementById('display-team-name').innerText = "MÁY: " + window.currentMyTeamName;
+            document.getElementById('score-label-client').innerText = window.currentMyTeamName;
+            autoScaleStage();
+
+            if (!pollingStarted) {
+                pollingStarted = true;
+                pollClient();
+            }
+        }
+
+        function updateMyTeamInfo(teams) {
+            window.teams = teams;
+            if (!teams.length) return;
+
+            let myTeamObj = null;
+            if (window.myTeamIndex !== null && teams[window.myTeamIndex]) {
+                myTeamObj = teams[window.myTeamIndex];
+            } else if (window.myTeam) {
+                const match = window.myTeam.match(/\d+/);
+                if (match) {
+                    myTeamObj = teams.find(t => t.doi.toLowerCase() === ("doi" + match[0]));
+                }
+            }
+
+            if (myTeamObj) {
+                window.currentMyTeamName = myTeamObj.tendoi;
+                document.getElementById('display-team-name').innerText = "MÁY: " + myTeamObj.tendoi;
+                document.getElementById('score-label-client').innerText = myTeamObj.tendoi;
+                document.getElementById('current-score').innerText = myTeamObj.diem;
+            }
+        }
+
+        function findQuestion(fullData, qId) {
+            if (!fullData || !qId) return null;
+            const key = String(qId);
+            let raw =
+                (fullData.question_bank && fullData.question_bank[key]) ||
+                (fullData.CauHoiV4 && fullData.CauHoiV4[key]) ||
+                fullData[key];
+
+            if (!raw || typeof raw !== 'object' || (!raw.cauhoi && !raw.noiDung)) {
+                raw = null;
+                const pools = [fullData.question_bank, fullData.CauHoiV4, fullData];
+                for (const pool of pools) {
+                    if (!pool || typeof pool !== 'object') continue;
+                    if (pool[key] && typeof pool[key] === 'object' && (pool[key].cauhoi || pool[key].noiDung)) {
+                        raw = pool[key];
+                        break;
+                    }
+                    const found = Object.values(pool).find(
+                        item => item && typeof item === 'object' && String(item.id) === key && (item.cauhoi || item.noiDung)
+                    );
+                    if (found) { raw = found; break; }
+                }
+            }
+
+            if (!raw || typeof raw !== 'object') return null;
+            return {
+                noiDung: raw.cauhoi || raw.noiDung || "",
+                dapAn: raw.danan || raw.dapAn || raw.dapan || "",
+                url: raw.url || raw.anh || raw.linkAnh || raw.hinhanh || raw.hinh_anh || raw.image || raw.img || raw.url_anh || ""
+            };
+        }
+
+        function resolveImageUrl(qObj) {
+            if (!qObj) return null;
+            const raw = qObj.url || qObj.anh || qObj.linkAnh || qObj.hinhanh || qObj.hinh_anh || qObj.image || qObj.img || qObj.url_anh || "";
+            if (typeof raw !== "string") return null;
+
+            const imgName = raw.trim();
+            if (imgName === "" || imgName.toUpperCase() === "NULL" || imgName === "undefined") return null;
+
+            const driveMatch = imgName.match(/[-\w]{25,}/);
+            if (imgName.includes("drive.google.com") && driveMatch) {
+                return "https://drive.google.com/thumbnail?id=" + driveMatch[0] + "&sz=w1200";
+            }
+            if (!imgName.includes(".") && !imgName.includes("/") && imgName.length >= 25) {
+                return "https://drive.google.com/thumbnail?id=" + imgName + "&sz=w1200";
+            }
+            if (imgName.startsWith("http://") || imgName.startsWith("https://")) {
+                return imgName;
+            }
+            return "../../img/vong4/" + imgName;
+        }
+
+        // Tự động tính cỡ chữ câu hỏi theo độ dài để không tràn khung
+        function getQuestionFontSize(text, hasImage) {
+            const len = String(text || "").length;
+            const lines = String(text || "").split('\n').length;
+            if (hasImage) {
+                if (len > 260 || lines >= 6) return "1.75rem";
+                if (len > 170 || lines >= 4) return "2rem";
+                return "2.35rem";
+            }
+            if (len > 280 || lines >= 6) return "1.9rem";
+            if (len > 180 || lines >= 4) return "2.2rem";
+            return "2.6rem";
+        }
+
+        // Tự động tính cỡ chữ đáp án dài (Phương án 1)
+        function isLongAnswer(ansText) {
+            const s = String(ansText || "").trim();
+            return s.length > 55 || s.includes('\n');
+        }
+
+        function getLongAnswerFontSize(ansText) {
+            const s = String(ansText || "").trim();
+            const lines = s.split('\n').length;
+            if (s.length > 340 || lines >= 7) return "1.75rem";
+            if (s.length > 220 || lines >= 5) return "2.05rem";
+            if (s.length > 120 || lines >= 3) return "2.35rem";
+            return "2.7rem";
+        }
+
+        function buildTagsHtml(data) {
+            const starHtml = data.ngoiSao ? `<span class="info-tag star-tag">⭐ NGÔI SAO HY VỌNG</span>` : "";
+            const teamHtml = `<span class="info-tag">CHỦ NHÀ: ${esc(data.doiDangThi)}</span>`;
+            const ptsHtml = `<span class="info-tag" style="border-color:#28a745;">CÂU ${esc(data.mucDiem)} ĐIỂM</span>`;
+            return `<div class="tags-container">${teamHtml} ${ptsHtml} ${starHtml}</div>`;
+        }
+
+        function buildQuestionContent(data) {
+            const tagsHtml = buildTagsHtml(data);
+            const rawText = data.question ? data.question.noiDung : "Đang tải nội dung...";
+            const questionText = esc(rawText);
+            const imgLink = resolveImageUrl(data.question);
+            const qFontSize = getQuestionFontSize(rawText, !!imgLink);
+
+            if (imgLink) {
+                return `
+                    ${tagsHtml}
+                    <div class="q-split-container">
+                        <div class="q-left-panel" style="font-size:${qFontSize};">${questionText}</div>
+                        <div class="q-right-panel">
+                            <img class="q-image" src="${esc(imgLink)}" onerror="this.outerHTML='<div class=\\'img-error-box\\'>⚠️ Không tải được ảnh!<br><small style=\\'color:#fff;\\'>Đường dẫn: ${esc(imgLink)}</small></div>'">
+                        </div>
+                    </div>
+                `;
+            }
+            return `
+                ${tagsHtml}
+                <div style="text-align: center; white-space: pre-wrap; line-height: 1.5; font-size:${qFontSize};">${questionText}</div>
+            `;
+        }
+
+        function buildLongAnswerContent(data, rawAns) {
+            const tagsHtml = buildTagsHtml(data);
+            const ansFontSize = getLongAnswerFontSize(rawAns);
+            return `
+                ${tagsHtml}
+                <div class="ans-long-heading">ĐÁP ÁN CHÍNH THỨC CỦA CHƯƠNG TRÌNH</div>
+                <div class="ans-long-box" style="font-size:${ansFontSize};">${esc(rawAns)}</div>
+            `;
+        }
+
+        function renderGameState(fullData) {
+            const data = Object.assign({}, (fullData && fullData.TrangThaiV4) || {});
+
+            if (data.timerTrigger && data.timerTrigger !== window.lastTimerTrigger) {
+                window.lastTimerTrigger = data.timerTrigger;
+                if (data.thoiGianKetThuc > 0) {
+                    window.localEndTime = Date.now() + data.thoiGianKetThuc;
+                } else {
+                    window.localEndTime = null;
+                }
+            } else if (!data.timerTrigger || data.timerTrigger === 0) {
+                window.localEndTime = null;
+            }
+
+            data.question = findQuestion(fullData, data.cauHoiHienTai);
+
+            const qBox = document.getElementById('q-box');
+            const actArea = document.getElementById('action-area');
+
+            const statusKey = (data.cauHoiHienTai || "") + (data.trangThaiGame || "") + (data.doiDangThi || "");
+            if (window.currentStatus !== statusKey) {
+                window.currentStatus = statusKey;
+            }
+
+            const isMainTeam = (window.currentMyTeamName === data.doiDangThi);
+
+            if (data.trangThaiGame === "BangDiem") {
+                setHTML(qBox, `<div class="msg-box" style="font-size: 2.8rem; color: #ffd700; font-weight: bold; text-transform: uppercase;">📊 ĐANG TRÌNH CHIẾU BẢNG ĐIỂM 4 ĐỘI<br><span style="font-size:2rem; margin-top:15px; display:inline-block; color:#a0c4ff; font-weight: normal; text-transform: none;">Mời các đội chú ý lên Màn hình chính!</span></div>`);
+                setHTML(actArea, '');
+            }
+            else if (data.trangThaiGame === "KetThucVong4") {
+                setHTML(qBox, `<div class="msg-box" style="font-size: 2.8rem; color: #ffd700; font-weight: bold; text-transform: uppercase;">🏆 TỔNG KẾT & TRAO GIẢI VÒNG VỀ ĐÍCH 🏆<br><span style="font-size:2rem; margin-top:15px; display:inline-block; color:#a0c4ff; font-weight: normal; text-transform: none;">Chúc mừng các đội đã hoàn thành xuất sắc phần thi!</span></div>`);
+                setHTML(actArea, '');
+            }
+            else if (data.trangThaiGame === "ChonGoi") {
+                if (data.goiCauHoi && data.goiCauHoi !== "") {
+                    setHTML(qBox, `<div style="font-size: 3rem; color: #ffd700; font-weight: bold; text-transform: uppercase;">GÓI ĐIỂM CỦA ${esc(data.doiDangThi)} LÀ:</div>`);
+                    setHTML(actArea, renderBeautifulPackage(data.goiCauHoi));
+                } else {
+                    setHTML(qBox, `<div style="font-size: 3rem; color: #a0c4ff; font-style: italic; animation: pulseStar 2s infinite;">Đang chờ MC chọn gói điểm cho ${esc(data.doiDangThi)}...</div>`);
+                    setHTML(actArea, '');
+                }
+            }
+            else if (data.trangThaiGame === "KetThuc") {
+                setHTML(qBox, `<div class="msg-box" style="font-size: 2.8rem; color: #56ccf2; font-weight: bold; text-transform: uppercase;">ĐÃ KẾT THÚC PHẦN THI CỦA ${esc(data.doiDangThi || "ĐỘI NÀY")}.<br><span style="font-size:2rem; margin-top:15px; display:inline-block; color:#a0c4ff; font-weight: normal; text-transform: none;">Mời các đội chú ý lên Màn hình chính để xem điểm.</span></div>`);
+                setHTML(actArea, '');
+            }
+            else if (data.trangThaiGame === "Cho") {
+                setHTML(qBox, `
+                    ${buildTagsHtml(data)}
+                    <span style='font-size: 5rem; color: #56ccf2; letter-spacing: 15px; font-weight: bold;'>???</span>
+                `);
+
+                if (data.ngoiSao) {
+                    const starMsg = isMainTeam
+                        ? "⭐ ĐỘI CỦA BẠN ĐÃ BẬT NGÔI SAO HY VỌNG! ⭐"
+                        : `⭐ ${esc(data.doiDangThi)} ĐÃ BẬT NGÔI SAO HY VỌNG! ⭐`;
+                    setHTML(actArea, `<div class="msg-box" style="font-size: 3rem; color: #ffd700; font-weight: bold; text-transform: uppercase; animation: pulseStar 1.5s infinite;">${starMsg}</div>`);
+                } else {
+                    setHTML(actArea, `<div class="msg-box" style="font-size: 2.5rem; color: #56ccf2; font-weight: bold; text-transform: uppercase;">${esc(data.doiDangThi)} CHUẨN BỊ...</div>`);
+                }
+            }
+            else if (data.trangThaiGame === "HienDapAn") {
+                const rawAns = data.question ? (data.question.dapAn || "Không có đáp án") : "Không có đáp án";
+                if (isLongAnswer(rawAns)) {
+                    // Phương án 1: Đáp án dài -> ẩn đề & ảnh, nhường trọn giữa màn hình cho hộp đáp án
+                    setHTML(qBox, buildLongAnswerContent(data, rawAns));
+                    setHTML(actArea, '');
+                } else {
+                    // Đáp án ngắn -> giữ đề ở trên, đáp án nổi bật ở dưới
+                    setHTML(qBox, buildQuestionContent(data));
+                    setHTML(actArea, `<div class="msg-box" style="color:#28d160; font-weight:bold; font-size: 2.1rem; font-style:normal; text-align:center;">ĐÁP ÁN CHÍNH THỨC CỦA CHƯƠNG TRÌNH:<br><span class="ans-short-box">${esc(rawAns)}</span></div>`);
+                }
+            }
+            else if (data.trangThaiGame === "ChonCauHoi" || data.trangThaiGame === "ChuanBi" || !data.cauHoiHienTai || data.cauHoiHienTai === "") {
+                const usedSet = new Set(data.usedQuestions ? data.usedQuestions.split(',').map(s => s.trim()).filter(Boolean) : []);
+                const arr12 = Array.from({ length: 12 }, (_, i) => i + 1);
+
+                const html20 = arr12.map(i => `<div class="q-btn-client q-btn-20-client${usedSet.has(`20_${i}`) ? ' used' : ''}">${i}</div>`).join('');
+                const html30 = arr12.map(i => `<div class="q-btn-client q-btn-30-client${usedSet.has(`30_${i}`) ? ' used' : ''}">${i}</div>`).join('');
+
+                const gridHtml = `
+                    <div style="font-size: 2.5rem; color: #ffd700; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,215,0,0.5);">🎙 MỜI ${esc(data.doiDangThi || "THÍ SINH")} CHỌN CÂU HỎI</div>
+                    <div class="q-grids-client">
+                        <div class="q-col-client q-col-20-client">
+                            <div class="q-col-title-client">BẢNG 20 ĐIỂM</div>
+                            <div class="q-btn-grid-client">${html20}</div>
+                        </div>
+                        <div class="q-col-client q-col-30-client">
+                            <div class="q-col-title-client">BẢNG 30 ĐIỂM</div>
+                            <div class="q-btn-grid-client">${html30}</div>
+                        </div>
+                    </div>
+                `;
+                setHTML(qBox, gridHtml);
+                setHTML(actArea, '');
+            }
+            else {
+                setHTML(qBox, buildQuestionContent(data));
+
+                if (data.trangThaiGame === "TraLoi") {
+                    if (window.localEndTime === null || (window.localEndTime - Date.now()) > 0) {
+                        if (isMainTeam) setHTML(actArea, `<div class="msg-box" style="color:#ffd700; font-weight:bold; font-size: 3rem; text-shadow: 0 0 15px rgba(255,215,0,0.5); text-transform: uppercase;">🎙 HÃY TRẢ LỜI TRỰC TIẾP!</div>`);
+                        else setHTML(actArea, `<div class="msg-box" style="font-size: 2.2rem;">Đang trong thời gian suy nghĩ của ${esc(data.doiDangThi)}...</div>`);
+                    }
+                }
+                else if (data.trangThaiGame === "CuopDiem") {
+                    if (window.localEndTime === null || (window.localEndTime - Date.now()) > 0) {
+                        setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:bold; font-size: 2.8rem; text-shadow: 0 0 15px rgba(255,75,43,0.5); text-transform: uppercase; text-align:center;">🚨 THỜI GIAN CƯỚP ĐIỂM 🚨<br><span style="font-size:2rem; color:#fff;">Các đội giơ tay giành quyền trả lời!</span></div>`);
+                    }
+                }
+            }
+        }
+
+        function renderBeautifulPackage(pkgStr) {
+            const pkgs = pkgStr.split(',');
+            let displayHtml = '<div style="display: flex; gap: 40px; justify-content: center; margin-top: 10px;">';
+            pkgs.forEach((p, idx) => {
+                const pColor = (p === '20') ? 'linear-gradient(135deg, #ff416c, #ff4b2b)' : 'linear-gradient(135deg, #0052cc, #003d99)';
+                const shadow = (p === '20') ? 'rgba(255,65,108,0.6)' : 'rgba(0,82,204,0.6)';
+                displayHtml += `<div style="text-align:center;">
+                    <div style="font-size:1.5rem; font-weight:bold; color:#a0c4ff; margin-bottom:10px; text-transform:uppercase;">Câu ${idx + 1}</div>
+                    <div style="background: ${pColor}; padding: 25px 50px; border-radius: 20px; font-size: 5rem; font-weight: 800; color: white; box-shadow: 0 15px 35px ${shadow}; border: 4px solid #fff; font-family: 'Montserrat', sans-serif;">${esc(p)}</div>
+                </div>`;
+            });
+            displayHtml += '</div>';
+            return displayHtml;
+        }
+
+        function updateTimer() {
+            const timeElement = document.getElementById('time-left');
+            if (window.currentStatus.includes("HienDapAn") || window.currentStatus.includes("KetThuc") || window.currentStatus.includes("BangDiem")) {
+                timeElement.innerText = "0s";
+                timeElement.style.color = "#ff4b2b";
+                window.localEndTime = null;
+                return;
+            }
+
+            if (!window.localEndTime) {
+                timeElement.innerText = "0s";
+                timeElement.style.color = "#ff4b2b";
+                return;
+            }
+
+            timeElement.style.color = "#ff4b2b";
+            const dist = window.localEndTime - Date.now();
+
+            if (dist <= 0) {
+                timeElement.innerText = "0s";
+                const actArea = document.getElementById('action-area');
+                if (window.currentStatus.includes("TraLoi")) {
+                    setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:bold; font-size: 2.5rem; text-align:center;">⏳ HẾT THỜI GIAN TRẢ LỜI!</div>`);
+                } else if (window.currentStatus.includes("CuopDiem")) {
+                    setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:bold; font-size: 2.5rem; text-transform: uppercase;">⏳ Hết thời gian cướp điểm!</div>`);
+                }
+            } else {
+                const seconds = Math.ceil(dist / 1000);
+                timeElement.innerText = seconds + "s";
+            }
+        }
+
+        async function pollClient() {
+            try {
+                const [v4, ds] = await Promise.all([V4.get("vong4"), V4.get("diemso")]);
+                updateMyTeamInfo(V4.teamsFrom(ds || {}));
+                renderGameState(v4 || {});
+            } catch (err) {
+                console.error("Lỗi lấy dữ liệu Firebase:", err);
+                const qBox = document.getElementById('q-box');
+                if (!window.currentStatus) {
+                    setHTML(qBox, `<div class="msg-box" style="color:#ff4b2b;">⚠️ Lỗi kết nối Firebase: ${esc(err.message)}</div>`);
+                }
+            } finally {
+                setTimeout(pollClient, 500);
+            }
+        }
+    </script>
+</body>
+</html>

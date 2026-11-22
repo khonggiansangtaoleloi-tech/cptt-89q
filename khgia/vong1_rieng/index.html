@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympia - Màn Hình Khán Giả V1 Riêng</title>
+    <!-- THÊM THƯ VIỆN BẮN PHÁO HOA -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        /* ================= BASE STYLES ================= */
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: radial-gradient(circle at top center, #0a7ab0 0%, #04304f 50%, #01101d 100%); color: #ffffff; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        
+        .header { width: 100%; padding: 15px 50px; font-size: 2.5rem; font-weight: bold; text-transform: uppercase; color: #ffe27a; border-bottom: 2px solid #ffe27a; background: rgba(0,0,0,0.5); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; text-shadow: 0 0 10px rgba(0,0,0,0.8); z-index: 10;}
+        
+        .btn-back { color: #ffd84d; text-decoration: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.3s;}
+        .btn-back:hover { color: #7fe3ff; text-shadow: 0 0 10px rgba(127, 227, 255, 0.67); }
+        
+        .btn-next { color: #ffd84d; text-decoration: none; font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.3s;}
+        .btn-next:hover { color: #7fe3ff; text-shadow: 0 0 10px rgba(127, 227, 255, 0.67); } 
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; padding: 0; box-sizing: border-box; overflow: hidden; }
+        
+        /* ================= THẺ FOCUS TOÀN MÀN HÌNH ================= */
+        .focus-card { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); width: 100%; max-width: 100%; height: 100%; border: none; border-radius: 0; display: flex; flex-direction: column; overflow: hidden; }
+        .focus-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; border-bottom: 2px solid #7fe3ff; background: rgba(255, 255, 255, 0.05); }
+        .focus-team-name { color: #8eeaff; font-size: 3rem; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px rgba(127, 227, 255, 0.67);}
+        .focus-team-score { font-size: 4.5rem; color: #ffd84d; font-weight: bold; line-height: 1; text-shadow: 0 0 20px rgba(255, 216, 77, 0.8);}
+        .focus-body { flex: 1; padding: 25px 40px; overflow-y: auto; display: flex; flex-direction: column; }
+        
+        .focus-body::-webkit-scrollbar { width: 8px; }
+        .focus-body::-webkit-scrollbar-thumb { background: #7fe3ff; border-radius: 10px; }
+        .focus-body::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+
+        /* LƯỚI ĐÁP ÁN */
+        .v1-answers-grid-focus { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; padding-bottom: 30px; }
+        .v1-list-item { background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(5px); border: 1px solid #7fe3ff; border-radius: 8px; padding: 12px 15px; text-align: left; box-shadow: 0 4px 10px rgba(127, 227, 255, 0.2); height: fit-content; }
+        .v1-list-q { font-size: 1.3rem; color: #ffffff; line-height: 1.35; margin-bottom: 8px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .v1-q-num { color: #ffd84d; font-weight: bold; }
+        .v1-list-a { font-size: 1.15rem; color: #8eeaff; font-weight: bold; margin-top: 4px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        .v1-list-c { font-size: 1.15rem; color: #7dffb4; font-weight: bold; margin-top: 4px; border-top: 1px dashed rgba(92, 240, 160, 0.5); padding-top: 4px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+
+        .status-waiting { color: #e6f3fa; font-style: italic; font-size: 2.5rem; margin: auto; text-align: center; animation: pulse 2s infinite; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+        .status-time { font-size: 1.6rem; margin-top: 20px; padding-top: 15px; border-top: 2px dashed #7fe3ff; text-align: center; font-weight: bold; padding-bottom: 30px; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);}
+
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; text-shadow: 0 0 15px rgba(255,255,255,0.6); } 100% { opacity: 0.6; } }
+
+        /* BỐ CỤC ĐANG THI */
+        .playing-layout { display: flex; width: 100%; height: 100%; gap: 30px; }
+        .history-sidebar { flex: 2; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; border-right: 2px dashed #7fe3ff; padding-right: 20px; overflow-y: auto; }
+        .history-item { background: rgba(0, 0, 0, 0.5); border: 1px solid #7fe3ff; border-left: 5px solid #8eeaff; padding: 12px 15px; border-radius: 8px; font-size: 1.3rem; color: #ffffff; line-height: 1.4; box-shadow: 0 0 10px rgba(127, 227, 255, 0.2); }
+        .current-main { flex: 5; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+        .current-q-num { font-size: 2.5rem; color: #ffd84d; margin-bottom: 25px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 15px rgba(255, 216, 77, 0.5); }
+        .current-q-text { font-size: 3.8rem; color: #ffffff; line-height: 1.4; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); }
+
+        .audience-timer-box { display: none; text-align: center; margin-top: 5px; }
+        .audience-timer-value { font-size: 3.5rem; font-weight: bold; color: #ffd84d; line-height: 1; text-shadow: 0 0 20px rgba(255, 216, 77, 0.8); font-family: monospace; }
+
+        .bottom-scores-bar { width: 100%; display: flex; justify-content: space-around; align-items: center; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px); border-top: 2px solid #7fe3ff; padding: 15px 0; z-index: 100; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }
+        .b-team-box { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.1); padding: 10px 40px; border-radius: 12px; border: 1px solid #7fe3ff; min-width: 150px; box-shadow: 0 0 10px rgba(127, 227, 255, 0.2); }
+        .b-team-name { color: #8eeaff; font-size: 1.6rem; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
+        .b-team-score { color: #ffd84d; font-size: 3rem; font-weight: bold; text-shadow: 0 0 15px rgba(255, 216, 77, 0.8); }
+
+        /* ================= HIỆU ỨNG GÓI CHUẨN BỊ THI ================= */
+        .prepare-container { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; animation: fadeIn 0.5s; }
+        .prepare-title { font-size: 4.5rem; color: #ffe27a; font-weight: bold; text-transform: uppercase; margin-bottom: 60px; text-shadow: 0 0 20px rgba(0, 0, 0, 0.8); letter-spacing: 3px; }
+        .package-grid { display: flex; gap: 50px; justify-content: center; flex-wrap: wrap;}
+        
+        .pkg-box { 
+            width: 220px; 
+            height: 220px; 
+            border-radius: 50%; 
+            background: rgba(0, 0, 0, 0.5); 
+            border: 5px solid #7fe3ff; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem; 
+            font-weight: bold; 
+            color: #7fe3ff; 
+            text-shadow: 0 0 10px rgba(127, 227, 255, 0.5); 
+            transition: all 0.1s; 
+            box-shadow: 0 0 20px rgba(127, 227, 255, 0.4);
+            text-align: center;
+        }
+        
+        /* HIỆU ỨNG QUAY RANDOM (MÀU XANH LÁ) */
+        .pkg-box.active-spin { background: #5cf0a0; border-color: #7dffb4; color: #000; transform: scale(1.15); box-shadow: 0 0 40px rgba(92, 240, 160, 0.8); text-shadow: none; z-index: 10;}
+        
+        /* HIỆU ỨNG CHỐT GÓI SAU KHI QUAY XONG (MÀU VÀNG RỰC RỠ) */
+        .pkg-box.locked-spin { background: #ffd84d; border-color: #ffe27a; color: #000; transform: scale(1.2); box-shadow: 0 0 50px rgba(255, 216, 77, 0.9); text-shadow: none; z-index: 20;}
+        
+        /* HIỆU ỨNG GÓI ĐÃ BỊ DÙNG (LÀM MỜ) */
+        .pkg-box.dimmed { opacity: 0.4; border-color: #444; background: rgba(0,0,0,0.7); color: #777; box-shadow: none; text-shadow: none; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
+
+        @media screen and (max-width: 1024px) {
+            .v1-answers-grid-focus { grid-template-columns: 1fr; }
+            .playing-layout { flex-direction: column; }
+            .history-sidebar { border-right: none; border-bottom: 2px dashed #7fe3ff; padding-right: 0; padding-bottom: 20px; justify-content: flex-start;}
+            .current-main { padding-right: 20px; }
+            .audience-timer-value { font-size: 2.8rem; }
+            .package-grid { gap: 20px; }
+            .pkg-box { width: 150px; height: 150px; font-size: 2.2rem; }
+        }
+
+        /* ===== CHỮ TỰ CO VỪA KHUNG - KHÔNG CUỘN (vòng thi miệng) ===== */
+        .fit-box { flex: 1 1 0; min-height: 0; min-width: 0; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .fit-text { font-weight: 800; line-height: 1.28; text-align: center; overflow-wrap: anywhere; white-space: pre-wrap; color: #ffffff; text-shadow: 2px 2px 6px rgba(0,0,0,0.8); max-width: 100%; }
+        .focus-body:has(.playing-layout), .focus-body:has(.v1-answers-grid-focus) { overflow: hidden; }
+        .focus-body { padding: 2vh 2.5vw; }
+        .playing-layout { height: 100%; min-height: 0; gap: 2vw; }
+        .history-sidebar { flex: 0 0 24%; min-height: 0; overflow: hidden; gap: 1vh; }
+        .history-item { flex: 1 1 0; min-height: 0; max-height: 24%; overflow: hidden; display: flex; padding: 0.8vh 0.8vw; }
+        .history-item .fit-text { font-weight: 500; color: #ffffff; text-align: left; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
+        .current-main { flex: 1; min-width: 0; min-height: 0; overflow: hidden; padding: 1vh 1vw; justify-content: flex-start; }
+        .current-q-num { flex: 0 0 auto; font-size: clamp(18px, 4.4vh, 52px); margin-bottom: 1.5vh; }
+        .current-main > div[style*="inline-block"] { flex: 0 0 auto; margin-top: 1.5vh !important; padding: 1vh 2vw !important; }
+        .current-main > div[style*="inline-block"] span { font-size: clamp(18px, 4vh, 48px) !important; }
+        .v1-answers-grid-focus { flex: 1 1 0; min-height: 0; grid-template-columns: repeat(3, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 1.4vh 1.2vw; padding-bottom: 0; }
+        .v1-list-item { display: flex; flex-direction: column; gap: 0.6vh; min-height: 0; overflow: hidden; height: auto; }
+        .v1-list-q { margin: 0; }
+        .v1-list-a, .v1-list-c { font-size: clamp(12px, 2.1vh, 26px); flex: 0 0 auto; }
+        .status-time { padding-bottom: 0; margin-top: 1vh; font-size: clamp(14px, 2.6vh, 30px); flex: 0 0 auto; }
+        .status-waiting { font-size: clamp(20px, 4.4vh, 54px); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div style="width: 160px;"></div> 
+        <div style="display: flex; flex-direction: column; align-items: center;">
+            <span>CHINH PHỤC TRI THỨC - VÒNG 1</span>
+            <div class="audience-timer-box" id="audience-timer-box">
+                <div class="audience-timer-value" id="audience-timer-value">60.0</div>
+            </div>
+        </div>
+        <a class="btn-next" onclick="window.open('../vong1_chung/', '_blank')">QUA VÒNG 1 Chung ▶</a>
+    </div>
+
+    <div class="main-content" id="main-content">
+        <div style="color:#e6f3fa; font-style:italic; font-size: 2.5rem; text-shadow: 1px 1px 3px #000;">Đang tải dữ liệu từ Firebase...</div>
+    </div>
+
+    <div class="bottom-scores-bar" id="bottom-scores-bar"></div>
+
+    <script>
+        // ==========================================
+        // FIREBASE: vong1_rieng/{match_state, question_bank}, diemso
+        // ==========================================
+        const SOUND_ON = true;                                   // false = tắt âm thanh trang này
+        const SND_SRC = "../../sound_effect/50s.mp3";
+        const $ = id => document.getElementById(id);
+        // ===== TỰ CO CHỮ VỪA KHUNG (không cắt chữ, không phải cuộn) =====
+        // .fit-text nằm trong .fit-box (có chiều cao cố định); data-max / data-min tính theo % chiều cao màn hình (vh)
+        function fitAll() {
+            const vh = window.innerHeight / 100;
+            document.querySelectorAll('.fit-text').forEach(el => {
+                const box = el.parentElement;
+                if (!box || !box.clientHeight) return;
+                let hi = (parseFloat(el.dataset.max) || 6) * vh, lo = (parseFloat(el.dataset.min) || 1.6) * vh;
+                const ok = () => el.offsetHeight <= box.clientHeight && el.scrollWidth <= box.clientWidth + 1;
+                el.style.fontSize = hi + 'px';
+                if (ok()) return;
+                while (hi - lo > 1) {
+                    const mid = (hi + lo) / 2;
+                    el.style.fontSize = mid + 'px';
+                    if (ok()) lo = mid; else hi = mid;
+                }
+                el.style.fontSize = lo + 'px';
+            });
+        }
+        let fitQueued = false;
+        function scheduleFit() { if (fitQueued) return; fitQueued = true; requestAnimationFrame(() => { fitQueued = false; fitAll(); }); }
+        window.addEventListener('resize', scheduleFit);
+        // ===== ÂM THANH =====  (cần khai báo trước: SOUND_ON, SND_SRC)
+        // Trình duyệt chỉ cho phát tiếng sau khi người dùng đã tương tác với trang (hoặc đã cấp quyền Autoplay).
+        // Trang tự phát ngay khi được phép; nếu bị chặn sẽ hiện 1 thanh nhắc, chỉ cần bấm vào màn hình 1 lần.
+        const SndHub = (function () {
+            const bar = document.createElement('div');
+            bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ffd84d;color:#000;text-align:center;padding:10px 14px;font:700 clamp(14px,2.4vh,22px) "Segoe UI",sans-serif;cursor:pointer;display:none;box-shadow:0 2px 12px rgba(0,0,0,.5)';
+            document.body.appendChild(bar);
+            let blocked = false, errMsg = '';
+            const players = [];
+            function refresh() {
+                if (!SOUND_ON) { bar.style.display = 'none'; return; }
+                if (errMsg) { bar.textContent = errMsg; bar.style.display = 'block'; }
+                else if (blocked) { bar.textContent = '🔊 Trình duyệt đang chặn âm thanh - bấm vào màn hình 1 lần để bật'; bar.style.display = 'block'; }
+                else bar.style.display = 'none';
+            }
+            function gesture() {
+                blocked = false; refresh();
+                players.forEach(p => { if (p.wanted() && p.audio.paused) p.tryPlay(); });
+            }
+            ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(ev => document.addEventListener(ev, gesture, { passive: true }));
+
+            function make(src) {
+                const a = new Audio(src); a.preload = 'auto';
+                let wanted = false;
+                async function tryPlay() {
+                    try { await a.play(); blocked = false; } catch (e) { blocked = true; }
+                    refresh();
+                }
+                function start(off) {
+                    if (!SOUND_ON) return;
+                    wanted = true;
+                    const o = Math.max(0, off || 0);
+                    if (isFinite(a.duration) && a.duration > 0 && o >= a.duration) { a.pause(); return; }
+                    try { a.currentTime = o; } catch (e) {}
+                    tryPlay();
+                }
+                function stop() { wanted = false; a.pause(); try { a.currentTime = 0; } catch (e) {} }
+                a.addEventListener('ended', () => { wanted = false; });
+                a.addEventListener('error', () => { errMsg = '⚠ Không tải được file âm thanh: ' + src + ' (kiểm tra thư mục sound_effect)'; refresh(); });
+                players.push({ audio: a, wanted: () => wanted, tryPlay });
+                return { start, stop, isPlaying: () => !a.paused && !a.ended };
+            }
+            return { make };
+        })();
+        const Snd = SndHub.make(SND_SRC);
+        const Welcome = SndHub.make("../../sound_effect/welcome.mp3");
+        const CFG_URL = "../../api/vong1_rieng.json";
+        const DEFAULT_DB = "../../api/vong1_rieng.json";
+        let DB = DEFAULT_DB, offset = 0, offAt = 0;
+        const dbReady = (async () => {
+            try {
+                const c = await (await fetch(CFG_URL + "?_t=" + Date.now())).json();
+                if (c && c.api_url) DB = String(c.api_url).replace(/\/[^\/]*\.json.*$/, "").replace(/\/$/, "");
+            } catch (e) {}
+        })();
+        async function fb(path, method = "GET", body) {
+            await dbReady;
+            const o = { method };
+            if (body !== undefined) { o.body = JSON.stringify(body); o.headers = { "Content-Type": "application/json" }; }
+            const r = await fetch(`${DB}/${path}.json` + (method === "GET" ? `?_t=${Date.now()}` : ""), o);
+            if (!r.ok) throw new Error("Firebase lỗi " + r.status);
+            return r.json();
+        }
+        async function ensureClock() {      // bù lệch đồng hồ so với server
+            if (offAt && Date.now() - offAt < 300000) return;
+            offAt = Date.now();
+            try {
+                const t0 = Date.now();
+                const sv = await fb("vong1_rieng/_sync", "PUT", { ".sv": "timestamp" });
+                const t1 = Date.now();
+                if (typeof sv === "number") { offset = sv - (t0 + t1) / 2; offAt = t1; }
+            } catch (e) {}
+        }
+        const nowS = () => Date.now() + offset;
+        const nat = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
+        const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        function listOf(o) {
+            if (!o) return [];
+            const e = Array.isArray(o) ? o.map((v, i) => [String(i), v]) : Object.entries(o);
+            return e.filter(x => x[1] != null).sort((a, b) => nat(a[0], b[0]));
+        }
+        function normBank(bank) {
+            const out = {};
+            Object.keys(bank || {}).sort(nat).forEach(k => {
+                out[k.toUpperCase()] = listOf(bank[k]).map(([id, q]) => ({
+                    id: id, linhVuc: q.linhvuc || ("Câu " + id), noiDung: q.cauhoi || "", dapAn: q.dapan || q.danan || ""
+                }));
+            });
+            return out;
+        }
+        function teamsFrom(d) {
+            return Object.keys(d || {}).sort(nat).map((k, i) => ({ doi: k, tendoi: (d[k] && d[k].tendoi) || ("Đội " + (i + 1)), diem: parseInt(d[k] && d[k].diem) || 0 }));
+        }
+
+        // ==========================================
+        // TRẠNG THÁI
+        // ==========================================
+        let ms = {}, bank = {}, teams = [];
+        let isAnimating = false, hasFiredConfetti = false, currentRandomizingTarget = "";
+        let timerOn = false, timerEnd = 0;
+        const usedPkgs = () => listOf(ms.goidadung).map(e => String(e[1]).toUpperCase());
+
+        function setHtml(el, html) { if (el._last !== html) { el.innerHTML = html; el._last = html; scheduleFit(); } }
+
+        // ---------- Pháo hoa ----------
+        function fireConfetti() {
+            var end = Date.now() + 2500;
+            (function frame() {
+                confetti({ particleCount: 5, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#ffd84d', '#8eeaff', '#7dffb4', '#ffffff'] });
+                confetti({ particleCount: 5, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#ffd84d', '#8eeaff', '#7dffb4', '#ffffff'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+
+        // ---------- Hiệu ứng random gói ----------
+        function runRandomAnimation(target) {
+            if (isAnimating) return;
+            isAnimating = true;
+            currentRandomizingTarget = target;
+
+            const pkgs = Object.keys(bank);
+            const used = usedPkgs();
+            let avail = pkgs.filter(p => !used.includes(p) || p === target);
+            if (avail.length === 0) avail = pkgs.slice();
+            if (!avail.includes(target)) avail.push(target);
+
+            const totalJumps = 3 * avail.length + avail.indexOf(target);
+            let jump = 0;
+            const interval = setInterval(() => {
+                pkgs.forEach(p => document.getElementById('pkg-' + p)?.classList.remove('active-spin'));
+                document.getElementById('pkg-' + avail[jump % avail.length])?.classList.add('active-spin');
+
+                if (jump >= totalJumps) {
+                    clearInterval(interval);
+                    const el = document.getElementById('pkg-' + target);
+                    if (el) { el.classList.remove('active-spin'); el.classList.add('locked-spin'); }
+                    setTimeout(() => {
+                        isAnimating = false;
+                        if (!hasFiredConfetti) { hasFiredConfetti = true; Welcome.start(0); try { fireConfetti(); } catch (e) { console.error(e); } }   // nhạc chào mừng + pháo hoa cùng lúc
+                        render();
+                    }, 500);
+                } else jump++;
+            }, 150);
+        }
+
+        // ---------- Đồng hồ (theo giờ server) ----------
+        setInterval(() => {
+            const v = $('audience-timer-value');
+            if (!timerOn) return;
+            const dist = timerEnd - nowS();
+            v.innerText = dist <= 0 ? "0.0" : (dist / 1000).toFixed(1);
+        }, 50);
+
+        // ---------- Âm thanh: phát từ lúc MC phát câu, dừng khi hết giờ / chuyển trạng thái ----------
+        let sndKey = null;
+        setInterval(() => {
+            const active = timerOn && (timerEnd - nowS() > 0);
+            const key = String(ms.cauhoihientai) + ":" + ms.thoigian;
+            if (active) { if (sndKey !== key) { sndKey = key; Welcome.stop(); Snd.start((nowS() - Number(ms.thoigian)) / 1000); } }
+            else if (sndKey !== null) { sndKey = null; Snd.stop(); }
+        }, 250);
+
+        // ---------- Quét Firebase ----------
+        async function poll() {
+            try {
+                await ensureClock();
+                const [v1, ds] = await Promise.all([fb("vong1_rieng"), fb("diemso")]);
+                const d = v1 || {};
+                ms = d.match_state || {};
+                bank = normBank(d.question_bank);
+                teams = teamsFrom(ds || {});
+                render();
+            } catch (e) { console.log("Lỗi tải Firebase:", e); }
+            finally { setTimeout(poll, 700); }
+        }
+        window.onload = poll;
+
+        // ==========================================
+        // RENDER
+        // ==========================================
+        function render() {
+            const main = $('main-content'), timerBox = $('audience-timer-box');
+
+            // THANH ĐIỂM
+            setHtml($('bottom-scores-bar'), teams.length
+                ? teams.map(t => `<div class="b-team-box"><div class="b-team-name">${esc(t.tendoi)}</div><div class="b-team-score">${t.diem}</div></div>`).join("")
+                : '<div style="color: #e6f3fa; font-style: italic;">Đang đồng bộ bảng điểm...</div>');
+
+            const activeQId = String(ms.cauhoihientai == null ? "" : ms.cauhoihientai);
+            const teamName = ms.doihientai || "";
+            const pkgKey = String(ms.goihientai || "").toUpperCase();
+            const isRevealed = !!(ms.config && ms.config.show);
+
+            if (teamName === "" || activeQId === "RESET_PKG" || activeQId === "Vong1") {
+                currentRandomizingTarget = ""; hasFiredConfetti = false;
+                setHtml(main, `<div class="status-waiting">Đang chờ Ban Giám Khảo chọn đội thi...</div>`);
+                timerOn = false; timerBox.style.display = 'none';
+                return;
+            }
+
+            // ================= CHUẨN BỊ + RANDOM GÓI =================
+            if (activeQId === "PREPARE" || activeQId === "RANDOM") {
+                if (activeQId === "PREPARE") { hasFiredConfetti = false; currentRandomizingTarget = ""; Welcome.stop(); }
+                const used = usedPkgs();
+                const allPkgs = Object.keys(bank);
+
+                if (!document.querySelector('.prepare-container')) {
+                    let h = `<div class="prepare-container"><div class="prepare-title">${esc(teamName)} CHUẨN BỊ THI</div><div class="package-grid">`;
+                    allPkgs.forEach(key => {
+                        const dim = (used.includes(key) && key !== pkgKey) ? "dimmed" : "";
+                        let label = "GÓI " + key.replace(/[^0-9]/g, '');
+                        if (label === "GÓI ") label = key;
+                        h += `<div class="pkg-box ${dim}" id="pkg-${key}">${label}</div>`;
+                    });
+                    h += `</div></div>`;
+                    main.innerHTML = h; main._last = "prep";
+                } else {
+                    document.querySelector('.prepare-title').innerText = `${teamName} CHUẨN BỊ THI`;
+                    if (!isAnimating) {
+                        allPkgs.forEach(key => {
+                            const el = document.getElementById('pkg-' + key);
+                            if (!el) return;
+                            const locked = key === pkgKey && activeQId === "RANDOM" && currentRandomizingTarget === key;
+                            el.classList.remove('active-spin');
+                            el.classList.toggle('locked-spin', locked);
+                            el.classList.toggle('dimmed', !locked && used.includes(key) && key !== pkgKey);
+                        });
+                    }
+                }
+                timerOn = false; timerBox.style.display = 'none';
+                if (activeQId === "RANDOM" && pkgKey && !isAnimating && currentRandomizingTarget !== pkgKey) runRandomAnimation(pkgKey);
+                return;
+            }
+            if (activeQId !== "") isAnimating = false;
+
+            const t = teams.find(x => x.tendoi === teamName);
+            const activeScore = t ? t.diem : 0;
+            const sub = (t && ms.dananthisinh && ms.dananthisinh[t.doi]) || "";
+            const graded = typeof sub === "string" && sub.includes("MC Chấm");
+            const teamQuestions = bank[pkgKey] || [];
+
+            // ================= ĐỒNG HỒ ĐẾM NGƯỢC =================
+            const isQuestion = activeQId !== "" && activeQId !== "KET_THUC";
+            if (isQuestion && Number(ms.thoigian) > 0 && !graded) {
+                timerEnd = Number(ms.thoigian) + 60000;
+                timerOn = true; timerBox.style.display = 'block';
+            } else { timerOn = false; timerBox.style.display = 'none'; }
+
+            let cardHtml = `
+                <div class="focus-card">
+                    <div class="focus-header">
+                        <div class="focus-team-name">${esc(teamName)}</div>
+                        <div class="focus-team-score">${activeScore}</div>
+                    </div>
+                    <div class="focus-body">`;
+
+            if (graded) {
+                // ================= MÀN HÌNH TỔNG KẾT =================
+                const parts = sub.replace(/\(MC Chấm\)/gi, "").trim().split("|");
+                let grid = `<div class="v1-answers-grid-focus">`;
+                teamQuestions.forEach((q, idx) => {
+                    const clean = (parts[idx] || "").trim();
+                    let aText = clean, color = "#8eeaff";
+                    const low = clean.toLowerCase();
+                    if (low.match(/c\d+:\s*\d+/)) {
+                        const sv = low.split(":")[1].trim();
+                        if (sv === "10") { aText = "✔ Đúng (+10đ)"; color = "#7dffb4"; }
+                        else if (sv === "0") { aText = "✘ Sai (0đ)"; color = "#ff416c"; }
+                        else if (sv === "1") { aText = "➖ Bỏ qua (0đ)"; color = "#aaaaaa"; }
+                    } else {
+                        const i = clean.indexOf(":");
+                        aText = i > -1 ? clean.substring(i + 1).trim() : clean;
+                        if (aText === "" || aText.toLowerCase().includes("bỏ qua") || aText === "...") { aText = "➖ Bỏ qua (0đ)"; color = "#aaaaaa"; }
+                    }
+                    grid += `
+                        <div class="v1-list-item">
+                            <div class="fit-box" style="justify-content:flex-start; align-items:flex-start;"><div class="fit-text v1-list-q" data-max="2.8" data-min="1.2" style="text-align:left; font-weight:600;"><span class="v1-q-num">Câu ${idx + 1}:</span> ${esc(q.noiDung)}</div></div>
+                            <div class="v1-list-a">Kết quả ${esc(teamName)}: <span style="color:${color};">${esc(aText)}</span></div>
+                            <div class="v1-list-c">Đáp án chuẩn: ${esc(q.dapAn)}</div>
+                        </div>`;
+                });
+                grid += `</div>`;
+                cardHtml += `${grid}<div class="status-time" style="color: #7dffb4;">Đã ghi nhận kết quả</div>`;
+            }
+            else if (activeQId === "KET_THUC") {
+                cardHtml += `<div class="status-waiting" style="color: #8eeaff;">Thí sinh đã nộp bài. Đang chờ MC cộng điểm...</div>`;
+            }
+            else if (!activeQId) {
+                cardHtml += `<div class="status-waiting">Đội đang chuẩn bị thi đấu...</div>`;
+            }
+            else {
+                // ================= MÀN HÌNH ĐANG THI =================
+                const cur = teamQuestions.findIndex(q => q.id == activeQId);
+                let historyHtml = "", currentHtml = "";
+                if (cur !== -1) {
+                    for (let i = 0; i < cur; i++) historyHtml += `<div class="history-item"><div class="fit-box" style="justify-content:flex-start;"><div class="fit-text" data-max="2.6" data-min="1.2"><b style="color:#ffd84d;">Câu ${i + 1}:</b> ${esc(teamQuestions[i].noiDung)}</div></div></div>`;
+                    const cQ = teamQuestions[cur];
+                    currentHtml = `
+                        <div class="current-q-num">CÂU HỎI SỐ ${cur + 1} - ${esc(cQ.linhVuc)}</div>
+                        <div class="fit-box"><div class="fit-text" data-max="15" data-min="3">${esc(cQ.noiDung)}</div></div>`;
+                    if (isRevealed) currentHtml += `
+                        <div style="margin-top: 40px; background: rgba(92, 240, 160, 0.2); border: 2px dashed #5cf0a0; padding: 15px 30px; border-radius: 12px; display: inline-block;">
+                            <span style="font-size: 2rem; color: #7dffb4; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">✔ Đáp án chuẩn:</span>
+                            <span style="font-size: 2.5rem; color: #ffffff; margin-left: 15px; font-weight: bold; text-shadow: 1px 1px 3px rgba(0,0,0,0.8);">${esc(cQ.dapAn)}</span>
+                        </div>`;
+                } else {
+                    currentHtml = `<div class="status-waiting">Đang đồng bộ nội dung câu hỏi...</div>`;
+                }
+                cardHtml += `<div class="playing-layout"><div class="history-sidebar">${historyHtml}</div><div class="current-main">${currentHtml}</div></div>`;
+            }
+
+            cardHtml += `</div></div>`;
+            setHtml(main, cardHtml);
+        }
+    </script>
+</body>
+</html>

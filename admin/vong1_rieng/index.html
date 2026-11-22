@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympia Admin Dashboard - Vòng 1 Riêng</title>
+    <style>
+        /* ================= BASE STYLES ================= */
+        body { font-family: 'Segoe UI', sans-serif; background: #eef2f7; margin: 0; padding: 15px; color: #333; box-sizing: border-box; }
+        .dashboard { max-width: 98%; margin: 0 auto; padding: 0 10px; }
+        
+        /* ================= HEADER ================= */
+        .header-panel { background: #003366; color: white; padding: 20px 30px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px; position: relative; }
+        .header-panel h1 { margin: 0; font-size: 2rem; letter-spacing: 1px; position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; pointer-events: none;}
+        
+        .btn-prev-round, .btn-next-round { color: white; padding: 12px 25px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 1.3rem; transition: 0.3s; display: inline-flex; align-items: center; text-transform: uppercase; letter-spacing: 1px; border: none; cursor: pointer; position: relative; z-index: 2; font-family: inherit;}
+        .btn-prev-round { background: #007bff; box-shadow: 0 4px 10px rgba(0,123,255,0.3); }
+        .btn-prev-round:hover { background: #0056b3; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,123,255,0.5); }
+        .btn-next-round { background: #28a745; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+        .btn-next-round:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(40,167,69,0.5); }
+
+        /* ================= PACKAGE PANEL ================= */
+        .package-panel { background: white; padding: 20px 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .package-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .package-panel-header h3 { margin: 0; color: #003366; font-size: 1.4rem; }
+        
+        .btn-random-pkg { background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; margin-right: 10px; transition: 0.2s;}
+        .btn-random-pkg:hover { background: #138496; transform: scale(1.05); }
+        .btn-reset-pkg { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.2s;}
+        .btn-reset-pkg:hover { background: #c82333; transform: scale(1.05); }
+        
+        .package-list { display: flex; gap: 15px; width: 100%; flex-wrap: wrap;}
+        .pkg-btn { flex: 1; padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: 2px solid #007bff; background: #fff; color: #007bff; cursor: pointer; transition: 0.3s; text-transform: uppercase;}
+        .pkg-btn.active { background: #28a745; color: white; border-color: #28a745; box-shadow: 0 0 10px rgba(40,167,69,0.5); }
+        .pkg-btn.dimmed { opacity: 0.4; border-color: #6c757d; color: #6c757d; background: #e9ecef;}
+
+        .status-bar { text-align: center; margin-bottom: 15px; font-style: italic; color: #666; font-size: 0.95rem; }
+        
+        /* ================= MAIN GRID ================= */
+        .main-grid { display: grid; grid-template-columns: 3.5fr 6.5fr; gap: 20px; align-items: start; }
+
+        /* ================= TEAMS PANEL ================= */
+        .teams-panel { display: block; width: 100%; position: sticky; top: 15px; } 
+        .team-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-top: 6px solid #007bff; display: flex; flex-direction: column; justify-content: space-between; height: fit-content; margin-bottom: 20px;}
+        .team-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px;}
+        .team-header h3 { margin: 0; color: #003366; font-size: 2.2rem; }
+        .score { font-size: 4.5rem; font-weight: bold; color: #003366; line-height: 1; }
+        
+        .btn-sync { background: #007bff; color: white; border: none; padding: 15px 20px; border-radius: 8px; font-weight: bold; font-size: 1.3rem; cursor: pointer; width: 100%; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,123,255,0.3);}
+        .btn-sync:hover:not(:disabled) { background: #0056b3; transform: translateY(-2px); }
+        .btn-sync:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.8; box-shadow: none; }
+        
+        .controls { display: flex; gap: 20px; align-items: center; justify-content: center; margin-bottom: 20px;}
+        .controls button { width: 100px; padding: 15px; font-size: 2rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; color: white; transition: 0.2s; line-height: 1;}
+        .btn-add { background: #28a745; }
+        .btn-add:hover { background: #218838; transform: scale(1.05); }
+        .btn-minus { background: #dc3545; }
+        .btn-minus:hover { background: #c82333; transform: scale(1.05); }
+        
+        .score-input { width: 80px; height: 60px; text-align: center; font-size: 1.8rem; font-weight: bold; border: 2px solid #ccc; border-radius: 8px; outline: none; box-sizing: border-box; color: #003366; }
+        .score-input:focus { border-color: #007bff; box-shadow: 0 0 8px rgba(0,123,255,0.5); }
+        
+        /* ================= QUESTIONS PANEL ================= */
+        .questions-panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); height: fit-content; }
+        .q-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px; }
+        .btn-close-q { background: #343a40; color: white; padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-close-q:hover { background: #23272b; }
+        
+        .team-filters { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; flex-wrap: wrap; }
+        .filter-btn { flex: 1; min-width: 100px; padding: 12px 0; background: #f8f9fa; border: 2px solid #dee2e6; border-radius: 6px; font-weight: bold; color: #007bff; cursor: pointer; transition: 0.2s; font-size: 1.1rem;}
+        .filter-btn.active { background: #007bff; border-color: #007bff; color: white; }
+        .filter-btn:hover:not(.active) { background: #e2e6ea; }
+        
+        .q-list { display: grid; grid-template-columns: 1fr; gap: 20px; overflow-y: auto; padding-right: 5px; align-items: stretch;}
+        .q-item { background: #ffffff; padding: 20px; border: 1px solid #dee2e6; border-radius: 10px; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: space-between;}
+        .q-item.active { background: #f0f8ff; border-color: #007bff; border-left: 6px solid #007bff; }
+        
+        .q-text { margin-bottom: 15px; flex-grow: 1; }
+        .q-number-badge { display: inline-block; background: #003366; color: white; padding: 5px 12px; border-radius: 6px; font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; letter-spacing: 0.5px;}
+        .q-content { font-size: 1.25rem; color: #2c3e50; line-height: 1.6; margin-bottom: 15px; }
+        
+        .candidate-ans-box { margin-top: 10px; padding: 12px; border-radius: 8px; background: #fff3cd; border: 2px dashed #ffc107; color: #856404; font-weight: bold; font-size: 1.3rem;}
+
+        .q-actions { display: flex; gap: 10px; margin-top: 15px;}
+        .btn-show { background: #007bff; color: white; padding: 12px 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; flex: 1; font-size: 1.05rem; transition: 0.2s;}
+        .btn-show:hover { background: #0056b3; }
+
+        .q-scoring-row { display: flex; gap: 10px; margin-top: 10px;}
+        .btn-mc-wrong, .btn-mc-correct { flex: 1; background: #fff; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; padding: 10px; }
+        .btn-mc-wrong { color: #dc3545; border: 2px solid #dc3545; }
+        .btn-mc-wrong.active { background: #dc3545; color: white; box-shadow: 0 0 10px rgba(220,53,69,0.4);}
+        .btn-mc-correct { color: #28a745; border: 2px solid #28a745; }
+        .btn-mc-correct.active { background: #28a745; color: white; box-shadow: 0 0 10px rgba(40,167,69,0.4);}
+
+        /* THANH SỐ THỨ TỰ CÂU HỎI */
+        .quick-nav-box { display: flex; justify-content: center; gap: 15px; padding-top: 20px; border-top: 2px solid #f0f0f0; margin-top: 20px; flex-wrap: wrap;}
+        .q-circle { width: 50px; height: 50px; border-radius: 50%; border: 3px solid #ccc; background: white; color: #333; font-size: 1.5rem; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);}
+        .q-circle.correct { background: #28a745; color: white; border-color: #28a745;}
+        .q-circle.wrong { background: #dc3545; color: white; border-color: #dc3545;}
+        
+        .q-circle.active-q { border-color: #007bff; background: #e7f1ff; transform: scale(1.15); box-shadow: 0 0 15px rgba(0,123,255,0.6); color: #007bff;}
+        .q-circle:hover { transform: scale(1.1); border-color: #007bff; }
+
+        @media screen and (max-width: 1200px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ================= OVERLAYS ================= */
+        #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.4); z-index: 10000; display: none; justify-content: center; align-items: center; }
+        .loading-popup { background-color: #002b5e; border: 2px solid #2898cf; border-radius: 50px; padding: 15px 40px; display: flex; align-items: center; gap: 15px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+        .loading-spinner { width: 24px; height: 24px; border: 4px solid #3b5f85; border-top: 4px solid #ffd700; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { color: #ffd700; font-size: 1.25rem; font-weight: 800; margin: 0; }
+
+        #scoring-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 10, 30, 0.85); z-index: 10001; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .scoring-card { background: linear-gradient(135deg, #003366, #0056b3); padding: 40px 60px; border-radius: 20px; text-align: center; box-shadow: 0 10px 40px rgba(0, 123, 255, 0.4); border: 2px solid #56ccf2; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-width: 400px;}
+        .scoring-icon { font-size: 5rem; margin-bottom: 20px; animation: bounceIcon 1s infinite alternate; }
+        .scoring-title { color: #ffd700; font-size: 2.2rem; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .scoring-subtitle { color: #fff; font-size: 1.3rem; margin-bottom: 0; opacity: 0.9; }
+        .scoring-loader { margin-top: 25px; width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; position: relative; }
+        .scoring-loader-bar { height: 100%; width: 50%; background: #56ccf2; border-radius: 10px; animation: loadingBar 1s infinite ease-in-out; }
+        
+        .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 10, 30, 0.85); z-index: 10005; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        .custom-modal-card { background: #fff; padding: 30px 40px; border-radius: 15px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.5); border-top: 6px solid #007bff; max-width: 450px; animation: popIn 0.3s ease-out; }
+        .custom-modal-title { color: #003366; font-size: 1.8rem; margin-top: 0; margin-bottom: 15px; font-weight: bold; text-transform: uppercase; }
+        .custom-modal-message { color: #444; font-size: 1.2rem; margin-bottom: 30px; line-height: 1.5; }
+        .custom-modal-actions { display: flex; justify-content: center; gap: 20px; }
+        .custom-modal-btn { padding: 12px 25px; font-size: 1.2rem; font-weight: bold; border-radius: 8px; border: none; cursor: pointer; transition: 0.2s; }
+        .btn-modal-cancel { background: #6c757d; color: white; }
+        .btn-modal-cancel:hover { background: #5a6268; transform: scale(1.05); }
+        .btn-modal-ok { background: #28a745; color: white; }
+        .btn-modal-ok:hover { background: #218838; transform: scale(1.05); }
+
+        @keyframes popIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(1); } }
+        @keyframes bounceIcon { from { transform: translateY(0); } to { transform: translateY(-15px); } }
+        @keyframes loadingBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+    </style>
+</head>
+<body>
+    <div id="loading-overlay"><div class="loading-popup"><div class="loading-spinner"></div><p class="loading-text" id="loading-text">Đang thao tác dữ liệu...</p></div></div>
+    <div id="scoring-overlay"><div class="scoring-card"><div class="scoring-icon">✨🏆✨</div><div class="scoring-title" id="scoring-team-name">ĐỘI THI</div><div class="scoring-subtitle">Đang tổng kết điểm. Vui lòng đợi...</div><div class="scoring-loader"><div class="scoring-loader-bar"></div></div></div></div>
+    
+    <!-- Custom Confirm -->
+    <div id="custom-confirm-overlay" class="custom-modal-overlay">
+        <div class="custom-modal-card">
+            <h3 class="custom-modal-title" id="custom-confirm-title">Xác nhận</h3>
+            <p class="custom-modal-message" id="custom-confirm-message">Bạn có chắc chắn?</p>
+            <div class="custom-modal-actions">
+                <button class="custom-modal-btn btn-modal-cancel" onclick="closeCustomConfirm()">Hủy Bỏ</button>
+                <button class="custom-modal-btn btn-modal-ok" onclick="executeCustomConfirm()">Đồng Ý</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert -->
+    <div id="custom-alert-overlay" class="custom-modal-overlay">
+        <div class="custom-modal-card">
+            <h3 class="custom-modal-title" id="custom-alert-title" style="color: #dc3545;">Thông báo</h3>
+            <p class="custom-modal-message" id="custom-alert-message">Nội dung</p>
+            <div class="custom-modal-actions">
+                <button class="custom-modal-btn btn-modal-ok" onclick="closeCustomAlert()" style="background: #007bff;">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <div class="header-panel">
+            <button onclick="window.open('../vong1')" class="btn-prev-round">◀ MẶC ĐỊNH VÒNG 1</button>
+            <h1>BẢNG ĐIỀU KHIỂN MC</h1>
+            <button onclick="window.open('../vong1_chung')" class="btn-next-round">CHUYỂN VÒNG 1 Chung ▶</button>
+        </div>
+
+        <div class="package-panel">
+            <div class="package-panel-header">
+                <h3 id="pkg-title">Đang chọn gói cho: <span style="color:#666">Chưa chọn đội</span></h3>
+                <div>
+                    <button class="btn-random-pkg" onclick="randomAssignPackage()">🎲 Chọn Ngẫu Nhiên</button>
+                    <button class="btn-reset-pkg" onclick="resetPackages()">Làm mới các Gói</button>
+                </div>
+            </div>
+            <div class="package-list" id="package-list"></div>
+        </div>
+
+        <div class="status-bar" id="admin-status">Đang tải dữ liệu từ Firebase...</div>
+        
+        <div class="main-grid">
+            <div class="teams-panel" id="team-grid"></div>
+            <div class="questions-panel">
+                <div class="q-header">
+                    <h2 style="margin: 0; color: #333; font-size:1.5rem;">Ngân hàng câu hỏi & Chấm điểm</h2>
+                    <div><button class="btn-close-q" onclick="closeQuestion()">ĐÓNG CÂU HỎI</button></div>
+                </div>
+                <div class="team-filters" id="dynamic-team-filters"></div>
+                <div class="q-list" id="question-list"></div>
+                <div id="quick-nav-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // FIREBASE: vong1_rieng/{match_state, question_bank}, diemso/{doiX:{diem,tendoi}}
+        // ==========================================
+        const $ = id => document.getElementById(id);
+        const CFG_URL = "../../api/vong1_rieng.json";
+        const DEFAULT_DB = "../../api/vong1_rieng.json";
+        let DB = DEFAULT_DB;
+        const dbReady = (async () => {
+            try {
+                const c = await (await fetch(CFG_URL + "?_t=" + Date.now())).json();
+                if (c && c.api_url) DB = String(c.api_url).replace(/\/[^\/]*\.json.*$/, "").replace(/\/$/, "");
+            } catch (e) {}
+        })();
+        async function fb(path, method = "GET", body) {
+            await dbReady;
+            const o = { method };
+            if (body !== undefined) { o.body = JSON.stringify(body); o.headers = { "Content-Type": "application/json" }; }
+            const r = await fetch(`${DB}/${path}.json` + (method === "GET" ? `?_t=${Date.now()}` : ""), o);
+            if (!r.ok) throw new Error("Firebase lỗi " + r.status);
+            return r.json();
+        }
+        const SV = { ".sv": "timestamp" };
+        const patchState = obj => fb("vong1_rieng/match_state", "PATCH", obj);   // key có "/" = ghi theo đường dẫn con
+
+        const nat = (a, b) => String(a).localeCompare(String(b), undefined, { numeric: true });
+        const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        function listOf(o) {
+            if (!o) return [];
+            const e = Array.isArray(o) ? o.map((v, i) => [String(i), v]) : Object.entries(o);
+            return e.filter(x => x[1] != null).sort((a, b) => nat(a[0], b[0]));
+        }
+        function normBank(bank) {
+            const out = {};
+            Object.keys(bank || {}).sort(nat).forEach(k => {
+                out[k.toUpperCase()] = listOf(bank[k]).map(([id, q]) => ({
+                    id: id, linhVuc: q.linhvuc || ("Câu " + id), text: q.cauhoi || "", dapAn: q.dapan || q.danan || ""
+                }));
+            });
+            return out;
+        }
+        function teamsFrom(d) {
+            return Object.keys(d || {}).sort(nat).map((k, i) => ({ doi: k, tendoi: (d[k] && d[k].tendoi) || ("Đội " + (i + 1)), diem: parseInt(d[k] && d[k].diem) || 0 }));
+        }
+
+        // ==========================================
+        // TRẠNG THÁI
+        // ==========================================
+        let currentTeamFilter = '';          // "ID1", "ID2"... (thứ tự đội trong diemso)
+        let currentQuestionIndex = null;     // null = chưa chọn câu nào
+        let A = { ms: {}, bank: {}, teams: [], loaded: false };
+
+        let teamPackageMap = JSON.parse(localStorage.getItem('olympia_team_pkg_map') || '{}');
+        let usedPackages = JSON.parse(localStorage.getItem('olympia_used_pkgs') || '[]');
+        let manualScoring = JSON.parse(localStorage.getItem('olympia_manual_scoring') || '{}');
+
+        const getCurrentTeam = () => A.teams[parseInt(currentTeamFilter.replace("ID", "")) - 1] || null;
+        const getCurrentTeamName = () => { const t = getCurrentTeam(); return t ? t.tendoi : ""; };
+        const getAssignedPackageForTeam = id => teamPackageMap[id] || null;
+        const getAvailablePackages = () => Object.keys(A.bank);
+        const saveUsed = () => localStorage.setItem('olympia_used_pkgs', JSON.stringify(usedPackages));
+        const syncUsedToFirebase = () => patchState({ goidadung: usedPackages.map(p => p.toLowerCase()) }).catch(console.error);
+
+        // ================= QUÉT FIREBASE =================
+        async function pollAdmin() {
+            try {
+                const [v1, ds] = await Promise.all([fb("vong1_rieng"), fb("diemso")]);
+                const d = v1 || {};
+                A.ms = d.match_state || {};
+                A.bank = normBank(d.question_bank);
+                A.teams = teamsFrom(ds || {});
+                A.loaded = true;
+                $('admin-status').innerText = "Đã cập nhật dữ liệu từ Firebase.";
+                renderDashboard();
+            } catch (e) {
+                $('admin-status').innerHTML = `<span style="color:red;">Lỗi kết nối Firebase: ${esc(e.message)}</span>`;
+            } finally { setTimeout(pollAdmin, 1500); }
+        }
+
+        // ================= OVERLAY CƠ BẢN =================
+        function showLoading(text) { $('loading-text').innerText = text; $('loading-overlay').style.display = 'flex'; }
+        function hideLoading() { $('loading-overlay').style.display = 'none'; }
+        function showScoringPopup(teamName) { $('scoring-team-name').innerText = teamName; $('scoring-overlay').style.display = 'flex'; }
+        function hideScoringPopup() { $('scoring-overlay').style.display = 'none'; }
+        function showCustomAlert(title, message) { $('custom-alert-title').innerText = title; $('custom-alert-message').innerHTML = message; $('custom-alert-overlay').style.display = 'flex'; }
+        function closeCustomAlert() { $('custom-alert-overlay').style.display = 'none'; }
+        let confirmCb = null;
+        function showCustomConfirm(title, message, cb) { $('custom-confirm-title').innerText = title; $('custom-confirm-message').innerHTML = message; confirmCb = cb; $('custom-confirm-overlay').style.display = 'flex'; }
+        function closeCustomConfirm() { $('custom-confirm-overlay').style.display = 'none'; confirmCb = null; }
+        function executeCustomConfirm() { const cb = confirmCb; closeCustomConfirm(); if (cb) cb(); }
+
+        // ================= CHỌN ĐỘI / GÓI =================
+        function setTeamFilter(filterId) {
+            currentTeamFilter = filterId;
+            currentQuestionIndex = null;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            const btn = $('btn-filter-' + filterId); if (btn) btn.classList.add('active');
+            renderDashboard();
+            const name = getCurrentTeamName();
+            if (name) patchState({
+                cauhoihientai: "PREPARE", doihientai: name,
+                goihientai: (teamPackageMap[filterId] || "").toLowerCase(),
+                "config/show": false, "config/ketvong": false
+            }).catch(console.error);
+        }
+
+        function assignPackage(pkgID) {
+            if (!currentTeamFilter) return showCustomAlert("Lỗi", "Vui lòng chọn đội trước!");
+            if (teamPackageMap[currentTeamFilter] === pkgID) return;
+            if (usedPackages.includes(pkgID)) return;
+
+            const oldPkg = teamPackageMap[currentTeamFilter];
+            if (oldPkg) usedPackages = usedPackages.filter(p => p !== oldPkg);
+            teamPackageMap[currentTeamFilter] = pkgID;
+            if (!usedPackages.includes(pkgID)) usedPackages.push(pkgID);
+
+            currentQuestionIndex = null;
+            localStorage.setItem('olympia_team_pkg_map', JSON.stringify(teamPackageMap));
+            saveUsed();
+            patchState({
+                doihientai: getCurrentTeamName(), goihientai: pkgID.toLowerCase(),
+                goidadung: usedPackages.map(p => p.toLowerCase())
+            }).catch(console.error);
+            renderDashboard();
+        }
+
+        function randomAssignPackage() {
+            if (!currentTeamFilter) return showCustomAlert("Lỗi Thao Tác", "Vui lòng click chọn Đội ở bên dưới trước khi bốc ngẫu nhiên!");
+            const allPkgs = getAvailablePackages();
+            if (allPkgs.length === 0) return showCustomAlert("Lỗi Dữ Liệu", "Không tìm thấy gói câu hỏi nào trong hệ thống!");
+
+            const currentPkg = teamPackageMap[currentTeamFilter];
+            const available = allPkgs.filter(p => !usedPackages.includes(p));
+            if (currentPkg) available.push(currentPkg);
+            if (available.length === 0) return showCustomAlert("Cảnh báo", "Tất cả các gói đã được phân hết!");
+
+            const selected = available[Math.floor(Math.random() * available.length)];
+            if (selected !== currentPkg) assignPackage(selected); else renderDashboard();
+
+            const name = getCurrentTeamName();
+            if (name) patchState({
+                cauhoihientai: "RANDOM", doihientai: name, goihientai: selected.toLowerCase(),
+                thoigian: 0, "config/show": false, "config/ketvong": false
+            }).catch(console.error);
+        }
+
+        function resetPackages() {
+            showCustomConfirm("CẢNH BÁO LÀM MỚI TẤT CẢ", "Hành động này sẽ Xóa Gói câu hỏi đã phân, xóa ĐIỂM ĐANG CHẤM và <b>xóa trắng trạng thái + bài làm</b> của vòng 1 riêng trên Firebase. Chắc chắn không?", async function () {
+                showLoading("Đang dọn dẹp hệ thống...");
+                teamPackageMap = {}; usedPackages = []; currentQuestionIndex = null; manualScoring = {};
+                ['olympia_team_pkg_map', 'olympia_used_pkgs', 'olympia_manual_scoring'].forEach(k => localStorage.removeItem(k));
+                try {
+                    await fb("vong1_rieng/match_state", "PUT", {
+                        cauhoihientai: "RESET_PKG", doihientai: "", goihientai: "", thoigian: 0,
+                        config: { show: false, ketvong: false }
+                    });
+                } catch (e) { console.error(e); }
+                location.reload();
+            });
+        }
+
+        function toggleManualScore(teamIdx, qIndex, val) {
+            const t = A.teams[teamIdx]; if (!t) return;
+            const name = t.tendoi;
+            if (!manualScoring[name]) manualScoring[name] = {};
+            manualScoring[name][qIndex] = (manualScoring[name][qIndex] === val) ? null : val;
+            localStorage.setItem('olympia_manual_scoring', JSON.stringify(manualScoring));
+            renderDashboard();
+        }
+
+        function jumpToQuestion(index, qId) {
+            currentQuestionIndex = index;
+            renderDashboard();
+            if (qId) setQuestion(qId);   // tự động phát khi bấm
+        }
+
+        // ================= RENDER =================
+        function renderDashboard() {
+            let fh = "";
+            A.teams.forEach((t, i) => {
+                const fid = "ID" + (i + 1);
+                fh += `<button class="filter-btn ${fid === currentTeamFilter ? 'active' : ''}" id="btn-filter-${fid}" onclick="setTeamFilter('${fid}')">${esc(t.tendoi)}</button>`;
+            });
+            $('dynamic-team-filters').innerHTML = fh;
+            renderPackages(); renderQuestions(); renderTeams();
+        }
+
+        function renderPackages() {
+            const pkgList = $('package-list');
+            if (!currentTeamFilter) {
+                $('pkg-title').innerHTML = `Đang chọn gói cho: <span style="color:#666">Chưa chọn đội</span>`;
+                pkgList.innerHTML = '<span style="color:#666; font-style:italic;">Vui lòng chọn đội bên dưới để thao tác...</span>';
+                return;
+            }
+            $('pkg-title').innerHTML = `Đang chọn gói cho: <span style="color:#007bff">${esc(getCurrentTeamName() || currentTeamFilter)}</span>`;
+            const allPkgs = getAvailablePackages();
+            if (allPkgs.length === 0) { pkgList.innerHTML = '<span style="color:red; font-style:italic;">Chưa có dữ liệu gói câu hỏi...</span>'; return; }
+
+            let h = "";
+            allPkgs.forEach(pkgId => {
+                const isUsed = usedPackages.includes(pkgId);
+                const mine = teamPackageMap[currentTeamFilter] === pkgId;
+                let cls = "pkg-btn";
+                if (mine) cls += " active"; else if (isUsed) cls += " dimmed";
+                let label = "GÓI " + pkgId.replace(/[^0-9]/g, '');
+                if (label === "GÓI ") label = pkgId;
+                h += `<button class="${cls}" onclick="assignPackage('${pkgId}')" ${isUsed && !mine ? 'disabled' : ''}>${mine ? 'ĐÃ CHỌN: ' + label : label}</button>`;
+            });
+            pkgList.innerHTML = h;
+        }
+
+        function renderQuestions() {
+            const qList = $('question-list'), nav = $('quick-nav-container');
+            if (!currentTeamFilter) {
+                qList.innerHTML = '<div style="padding: 20px; color: #666; font-style: italic; text-align:center; font-size: 1.1rem;">Vui lòng click chọn đội phía trên để xem ngân hàng câu hỏi...</div>';
+                nav.innerHTML = '';
+                return;
+            }
+            const pkg = getAssignedPackageForTeam(currentTeamFilter);
+            const qs = (pkg && A.bank[pkg]) ? A.bank[pkg] : [];
+            const team = getCurrentTeam();
+            const teamName = team ? team.tendoi : currentTeamFilter;
+            const tState = manualScoring[teamName] || {};
+            const sub = String((team && A.ms.dananthisinh && A.ms.dananthisinh[team.doi]) || "");
+            const subGraded = sub.includes("MC Chấm");
+            const subArr = sub.split("|");
+
+            nav.innerHTML = '';
+            if (qs.length === 0) {
+                qList.innerHTML = '<div style="padding: 20px; color: #666; font-style: italic; text-align:center; font-size: 1.1rem;">Vui lòng Bốc Ngẫu Nhiên (hoặc bấm chọn Gói) để hiển thị câu hỏi!</div>';
+                return;
+            }
+
+            // thanh số thứ tự
+            let nh = `<div class="quick-nav-box">`;
+            qs.forEach((q, i) => {
+                let c = "q-circle";
+                if (currentQuestionIndex !== null && i === currentQuestionIndex) c += " active-q";
+                if (tState[i] === true) c += " correct"; else if (tState[i] === false) c += " wrong";
+                nh += `<div class="${c}" onclick="jumpToQuestion(${i}, '${q.id}')" title="Phát Câu ${q.id}">${i + 1}</div>`;
+            });
+            nav.innerHTML = nh + `</div>`;
+
+            if (currentQuestionIndex === null) {
+                qList.innerHTML = '<div style="padding: 20px; color: #666; font-style: italic; text-align:center; font-size: 1.1rem;">Vui lòng click vào số câu hỏi bên dưới để xem nội dung và phát cho thí sinh...</div>';
+                return;
+            }
+
+            const i = Math.min(currentQuestionIndex, qs.length - 1);
+            const q = qs[i];
+            const isActive = String(q.id) === String(A.ms.cauhoihientai) && A.ms.doihientai === teamName;
+
+            let cand = "Chưa có đáp án";
+            if (subGraded) cand = "(đã chấm điểm)";
+            else if (subArr[i]) { const p = subArr[i].trim(); cand = p.substring(p.indexOf(':') + 1).trim() || cand; }
+
+            const ti = A.teams.indexOf(team);
+            qList.innerHTML = `
+                <div class="q-item ${isActive ? 'active' : ''}">
+                    <div class="q-text">
+                        <span class="q-number-badge">Câu ${esc(q.id)}</span>
+                        <div class="q-content">
+                            <span style="color:#007bff; font-weight:bold; margin-right: 5px;">${esc(q.linhVuc)}</span> ${esc(q.text)}
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #ccc;"><b>Đáp án MC:</b> <span style="color:#28a745; font-weight:bold;">${esc(q.dapAn)}</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="q-actions"><button class="btn-show" onclick="setQuestion('${q.id}')">Phát Lại Câu ${esc(q.id)}</button></div>
+                        <div class="q-scoring-row">
+                            <button class="btn-mc-wrong ${tState[i] === false ? 'active' : ''}" onclick="toggleManualScore(${ti}, ${i}, false)">✘ Sai (0đ)</button>
+                            <button class="btn-mc-correct ${tState[i] === true ? 'active' : ''}" onclick="toggleManualScore(${ti}, ${i}, true)">✔ Đúng (+10đ)</button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderTeams() {
+            const grid = $('team-grid');
+            const saved = {};
+            document.querySelectorAll('.score-input').forEach(inp => { saved[inp.id] = inp.value; if (document.activeElement === inp) saved.__focus = inp.id; });
+
+            if (!currentTeamFilter) {
+                grid.innerHTML = `<div style="text-align:center; padding: 40px 20px; color:#999; font-style:italic; border: 1px dashed #ccc; border-radius: 8px; font-size: 1.1rem; background: #fff;">Chưa chọn đội. Vui lòng click chọn Đội ở bên phải để bắt đầu.</div>`;
+                return;
+            }
+            const idx = parseInt(currentTeamFilter.replace("ID", "")) - 1;
+            const t = A.teams[idx];
+            if (!t) { grid.innerHTML = ""; return; }
+
+            const pkg = getAssignedPackageForTeam(currentTeamFilter);
+            let syncHtml = "";
+            if (pkg) {
+                const tState = manualScoring[t.tendoi] || {};
+                let local = 0;
+                for (let j = 0; j < 6; j++) if (tState[j] === true) local += 10;
+                const synced = String((A.ms.dananthisinh && A.ms.dananthisinh[t.doi]) || "").includes("MC Chấm");
+                syncHtml = `
+                    <div style="margin-top: 10px; padding-top: 25px; border-top: 2px dashed #eee; text-align: center;">
+                        <div style="font-size: 1.4rem; font-weight: bold; margin-bottom: 20px; color: #003366;">
+                            Điểm tạm tính Vòng này: <span style="color: #28a745; font-size: 2.5rem; display:block; margin-top:5px;">${local} đ</span>
+                        </div>
+                        <button class="btn-sync" onclick="syncManualScore(${idx}, ${local})" ${synced ? 'disabled' : ''}>
+                            ${synced ? '✔ ĐÃ GHI KẾT QUẢ LÊN HỆ THỐNG' : '⬆ GỬI KẾT QUẢ & CỘNG ĐIỂM'}
+                        </button>
+                    </div>`;
+            }
+            grid.innerHTML = `
+                <div class="team-card">
+                    <div>
+                        <div class="team-header"><h3>${esc(t.tendoi)}</h3><div class="score" id="score_${idx}">${t.diem}</div></div>
+                        <div class="controls">
+                            <button class="btn-minus" onclick="changeScore(${idx}, -1)">-</button>
+                            <input type="number" id="inp_${idx}" value="10" step="10" class="score-input" onclick="this.select()">
+                            <button class="btn-add" onclick="changeScore(${idx}, 1)">+</button>
+                        </div>
+                    </div>
+                    ${syncHtml}
+                </div>`;
+            Object.keys(saved).forEach(id => {
+                if (id === '__focus') return;
+                const el = $(id); if (el) { el.value = saved[id]; if (saved.__focus === id) el.focus(); }
+            });
+        }
+
+        // ================= ĐIỂM SỐ =================
+        async function addScore(team, points) {
+            const cur = parseInt(await fb("diemso/" + team.doi + "/diem")) || 0;
+            const nv = cur + points;
+            await fb("diemso/" + team.doi, "PATCH", { diem: nv });
+            team.diem = nv;
+            return nv;
+        }
+        async function changeScore(idx, mul) {
+            const t = A.teams[idx]; if (!t) return;
+            const val = parseInt($('inp_' + idx).value);
+            if (isNaN(val) || val <= 0) return showCustomAlert("Lỗi", 'Vui lòng nhập số điểm hợp lệ!');
+            const pts = val * mul;
+            try {
+                const nv = await addScore(t, pts);
+                const el = $('score_' + idx); if (el) el.innerText = nv;
+                $('admin-status').innerText = `[Firebase] Đã cập nhật ${pts > 0 ? '+' + pts : pts}đ cho ${t.tendoi}.`;
+            } catch (e) { showCustomAlert("Lỗi", "Không thể cập nhật điểm, kiểm tra kết nối mạng!"); }
+        }
+
+        // ================= ĐIỀU KHIỂN CÂU HỎI =================
+        function setQuestion(id) {
+            const pkg = getAssignedPackageForTeam(currentTeamFilter);
+            if (!pkg) return showCustomAlert("Cảnh báo", "Vui lòng gán Gói câu hỏi trước!");
+            const name = getCurrentTeamName();
+            if (!name) return showCustomAlert("Lỗi", "Không tìm thấy tên đội!");
+
+            showLoading(`Đang phát câu ${id}...`);
+            patchState({
+                cauhoihientai: String(id), doihientai: name, goihientai: pkg.toLowerCase(),
+                thoigian: SV,                                   // giờ server lúc phát -> mọi máy đếm 60s đồng bộ
+                "config/show": false, "config/ketvong": false
+            }).catch(e => console.error(e)).finally(() => setTimeout(hideLoading, 200));
+        }
+
+        function closeQuestion() {
+            showCustomConfirm("ĐÓNG CÂU HỎI & LÀM SẠCH", "Xác nhận Đóng câu hỏi và LÀM SẠCH ĐÁP ÁN của đội hiện tại?", async function () {
+                showLoading("Đang đóng câu hỏi...");
+                const team = getCurrentTeam();
+                try {
+                    const upd = { cauhoihientai: "", doihientai: "", goihientai: "", "config/show": false, "config/ketvong": false };
+                    if (team) upd["dananthisinh/" + team.doi] = null;          // xóa bài làm của đội
+                    await patchState(upd);
+                } catch (e) { console.error(e); }
+                if (team && manualScoring[team.tendoi]) { delete manualScoring[team.tendoi]; localStorage.setItem('olympia_manual_scoring', JSON.stringify(manualScoring)); }
+                hideLoading();
+                renderDashboard();
+            });
+        }
+
+        function syncManualScore(idx, localScore) {
+            const t = A.teams[idx]; if (!t) return;
+            showCustomConfirm("XÁC NHẬN GỬI ĐIỂM", `Cộng thêm <b>${localScore} điểm</b> cho <b>${esc(t.tendoi)}</b> và KẾT THÚC LƯỢT THI?`, async function () {
+                showScoringPopup(t.tendoi);
+                const tState = manualScoring[t.tendoi] || {};
+                const arr = [];
+                for (let i = 0; i < 6; i++) arr.push(tState[i] === true ? `C${i + 1}: 10` : (tState[i] === false ? `C${i + 1}: 0` : `C${i + 1}: 1`));
+                const ansStr = arr.join("|") + " (MC Chấm)";
+                document.querySelectorAll('.btn-sync').forEach(b => { b.disabled = true; b.innerText = '✔ ĐANG LƯU...'; });
+
+                const pkg = getAssignedPackageForTeam(currentTeamFilter) || "";
+                try {
+                    await patchState({
+                        cauhoihientai: "KET_THUC", doihientai: t.tendoi, goihientai: pkg.toLowerCase(),
+                        "config/ketvong": true, "config/show": false,
+                        ["dananthisinh/" + t.doi]: ansStr
+                    });
+                    if (localScore > 0) await addScore(t, localScore);
+                    document.querySelectorAll('.btn-sync').forEach(b => { b.innerText = '✔ ĐÃ GHI KẾT QUẢ'; });
+                } catch (e) {
+                    console.error(e);
+                    showCustomAlert("Lỗi", "Ghi kết quả thất bại, vui lòng thử lại!");
+                    document.querySelectorAll('.btn-sync').forEach(b => { b.disabled = false; b.innerText = '⬆ GỬI KẾT QUẢ & CỘNG ĐIỂM'; });
+                }
+                setTimeout(hideScoringPopup, 1200);
+            });
+        }
+
+        pollAdmin();
+    </script>
+</body>
+</html>

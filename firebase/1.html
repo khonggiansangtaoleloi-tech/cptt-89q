@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase DB Manager | Olympia Vòng 1</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-color: #f8fafc;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --success-color: #10b981;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
+                              radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%);
+            color: var(--text-color);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        /* Glassmorphism Card Style */
+        .card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Status indicator */
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #64748b;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 8px transparent;
+            transition: all 0.3s ease;
+        }
+        .status-dot.active {
+            background-color: var(--success-color);
+            box-shadow: 0 0 10px var(--success-color);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: monospace;
+            box-sizing: border-box;
+            outline: none;
+            transition: border 0.3s;
+        }
+        
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--accent-color);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+        
+        button.btn-success {
+            background-color: var(--success-color);
+        }
+        button.btn-success:hover {
+            background-color: #059669;
+        }
+
+        pre {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid var(--glass-border);
+            color: #a7f3d0;
+            font-size: 0.95rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <h2>
+            <span class="status-dot" id="status-indicator"></span> 
+            Kết nối & Xem Dữ Liệu
+        </h2>
+        <div class="form-group">
+            <label for="db-url">Firebase Database URL (đuôi .json)</label>
+            <input type="text" id="db-url" value="https://cptt-89-default-rtdb.firebaseio.com/diemso.json" placeholder="Nhập link kết thúc bằng .json">
+        </div>
+        <button onclick="loadData()">Tải Dữ Liệu Hiện Tại</button>
+        
+        <pre id="data-view">// Dữ liệu JSON hiện tại sẽ hiển thị ở đây...</pre>
+    </div>
+
+    <div class="card">
+        <h2>Thêm Dữ Liệu Mới (JSON format)</h2>
+        <div class="form-group">
+            <label for="new-data">Nhập dữ liệu cần thêm (Định dạng JSON chuẩn)</label>
+            <textarea id="new-data" placeholder='Ví dụ:&#10;{&#10;  "nguoi_choi_1": { "diem": 20, "trang_thai": "san_sang" }&#10;}'></textarea>
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn-success" onclick="updateData('PATCH')">Cập nhật / Gộp data (PATCH)</button>
+            <button onclick="updateData('POST')">Thêm dòng mới (POST tạo push ID)</button>
+        </div>
+        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 10px;">
+            * <b>PATCH:</b> Dùng để thêm vào object hoặc thay đổi giá trị cụ thể mà không làm mất dữ liệu cũ ở các key khác.<br>
+            * <b>POST:</b> Firebase sẽ tạo ra một key ngẫu nhiên (Push ID) để chứa data của bạn.
+        </p>
+    </div>
+</div>
+
+<script>
+    const statusDot = document.getElementById('status-indicator');
+    const dataView = document.getElementById('data-view');
+    const urlInput = document.getElementById('db-url');
+    const dataInput = document.getElementById('new-data');
+
+    // Hàm lấy dữ liệu (GET)
+    async function loadData() {
+        const url = urlInput.value.trim();
+        if (!url.endsWith('.json')) {
+            alert('URL phải kết thúc bằng .json');
+            return;
+        }
+
+        dataView.textContent = "Đang tải dữ liệu...";
+        statusDot.classList.remove('active');
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Không thể truy cập database. Vui lòng kiểm tra lại rule/quyền truy cập!');
+            
+            const data = await response.json();
+            dataView.textContent = JSON.stringify(data, null, 4);
+            statusDot.classList.add('active'); // Bật đèn trạng thái xanh
+        } catch (error) {
+            dataView.textContent = `Lỗi: ${error.message}`;
+            console.error(error);
+        }
+    }
+
+    // Hàm thêm/cập nhật dữ liệu (PATCH hoặc POST)
+    async function updateData(method) {
+        const url = urlInput.value.trim();
+        const rawData = dataInput.value.trim();
+
+        if (!rawData) {
+            alert('Vui lòng nhập dữ liệu JSON!');
+            return;
+        }
+
+        let parsedData;
+        try {
+            // Kiểm tra xem dữ liệu nhập vào có phải JSON chuẩn không
+            parsedData = JSON.parse(rawData);
+        } catch (e) {
+            alert('Lỗi: Dữ liệu bạn nhập không phải là JSON hợp lệ. Hãy kiểm tra lại ngoặc kép và dấu phẩy!');
+            return;
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: method, // 'PATCH' hoặc 'POST'
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(parsedData)
+            });
+
+            if (!response.ok) throw new Error('Cập nhật thất bại. Kiểm tra Security Rules Firebase.');
+
+            const result = await response.json();
+            alert(`Thao tác ${method} thành công!`);
+            
+            // Tải lại dữ liệu mới nhất
+            loadData();
+            
+            // Tự động clear input sau khi thêm thành công nếu bạn muốn
+            // dataInput.value = ""; 
+        } catch (error) {
+            alert(`Lỗi khi đẩy dữ liệu: ${error.message}`);
+        }
+    }
+
+    // Load data ngay khi mở trang
+    window.onload = loadData;
+</script>
+
+</body>
+</html>

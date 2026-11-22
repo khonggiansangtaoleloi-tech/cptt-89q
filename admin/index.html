@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympia - Trung Tâm Điều Khiển</title>
+    <style>
+        /* TỔNG THỂ GIAO DIỆN ADMIN HUB */
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: radial-gradient(circle at center, #002244 0%, #000011 100%); 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            min-height: 100vh; 
+            overflow-x: hidden;
+        }
+
+        /* HEADER / TIÊU ĐỀ */
+        .header {
+            text-align: center;
+            margin-bottom: 45px;
+            animation: fadeInDown 1s ease-out;
+        }
+        
+        /* LOGO */
+        .logo {
+            width: 108px;
+            height: auto;
+            margin-bottom: 18px;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6)); 
+            border-radius: 50%;
+        }
+
+        .header h1 {
+            color: #ffd700;
+            font-size: 3.15rem;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 3.6px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 2px 2px 5px rgba(0,0,0,0.8);
+        }
+        .header p {
+            color: #ff416c; 
+            font-size: 1.35rem;
+            font-weight: bold;
+            margin-top: 9px;
+            text-transform: uppercase;
+            letter-spacing: 4.5px;
+            text-shadow: 0 0 10px rgba(255, 65, 108, 0.5);
+        }
+
+        /* LƯỚI CHỨA 4 VÒNG THI - Sử dụng Flexbox để dễ dàng chia 3 trên, 2 dưới */
+        .grid-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 36px;
+            width: 95%;
+            max-width: 1200px; /* Tăng nhẹ max-width để đủ chỗ cho 3 thẻ */
+            padding: 18px;
+            animation: fadeInUp 1s ease-out 0.3s backwards;
+        }
+
+        /* THẺ CARD CHO TỪNG VÒNG */
+        .round-card {
+            /* Cấu hình chiều rộng: 1/3 dòng trừ đi khoảng trống gap */
+            width: calc(33.333% - 24px); 
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid #56ccf2;
+            border-radius: 18px;
+            padding: 45px 18px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(86, 204, 242, 0.2);
+            cursor: pointer;
+        }
+
+        .round-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+            transform: skewX(-25deg);
+            transition: all 0.6s ease;
+        }
+
+        .round-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: #ffd700;
+            box-shadow: 0 15px 35px rgba(255, 215, 0, 0.4);
+            background: rgba(255, 215, 0, 0.05);
+        }
+        .round-card:hover::before {
+            left: 200%;
+        }
+        .round-card:hover .round-num {
+            color: white;
+        }
+        .round-card:hover .round-name {
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        /* CHỮ BÊN TRONG THẺ */
+        .round-num {
+            font-size: 1.35rem;
+            color: #aaaaaa;
+            text-transform: uppercase;
+            letter-spacing: 2.7px;
+            margin-bottom: 13.5px;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+        .round-name {
+            font-size: 2.52rem;
+            font-weight: bold;
+            color: #56ccf2;
+            margin: 0;
+            line-height: 1.2;
+            transition: 0.3s;
+            text-shadow: 0 0 15px rgba(86, 204, 242, 0.5);
+            text-align: center;
+        }
+
+        /* HIỆU ỨNG XUẤT HIỆN */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* TỐI ƯU CHO ĐIỆN THOẠI & TABLET */
+        @media screen and (max-width: 1024px) {
+            .round-card { width: calc(50% - 18px); /* Chuyển về 2 cột trên tablet */ }
+        }
+
+        @media screen and (max-width: 900px) {
+            .grid-container { gap: 22px; }
+            .header h1 { font-size: 2.25rem; }
+            .round-name { font-size: 1.8rem; }
+            .round-card { padding: 36px 14px; width: calc(50% - 11px); }
+            .logo { width: 81px; }
+        }
+
+        @media screen and (max-width: 600px) {
+            .grid-container {
+                flex-direction: column; /* Chuyển về 1 cột trên điện thoại */
+                align-items: center;
+            }
+            .round-card { width: 100%; max-width: 400px; }
+            .header h1 { font-size: 1.8rem; }
+            .header p { font-size: 1.08rem; }
+            .logo { width: 72px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="https://media.leloipt.edu.vn/Media/30_TH1041/Images/footer-logo-leloi83f2a8da-5-e.png" alt="Logo Trường Lê Lợi" class="logo">
+        <h1>HỆ THỐNG ĐIỀU KHIỂN</h1>
+        <p>🔴 Chỉ Dành Cho Ban Tổ Chức 🔴</p>
+    </div>
+
+    <!-- Cấu trúc HTML giữ nguyên, CSS flexbox sẽ tự động ép dòng: 3 thẻ đầu ở hàng 1, 2 thẻ cuối tự động tràn xuống hàng 2 và nằm giữa -->
+    <div class="grid-container">
+         <a href="vong1_rieng/" class="round-card">
+            <span class="round-num">Vòng 1 Riêng</span>
+            <span class="round-name">Khởi Động Riêng</span>
+        </a>
+        <a href="vong1_chung/" class="round-card">
+            <span class="round-num">Vòng 1 Chung</span>
+            <span class="round-name">Khởi Động Chung</span>
+        </a>
+        <a href="vong2/" class="round-card">
+            <span class="round-num">Vòng 2</span>
+            <span class="round-name">Vượt Chướng<br>Ngại Vật</span>
+        </a>
+        
+        <a href="vong3/" class="round-card">
+            <span class="round-num">Vòng 3</span>
+            <span class="round-name">Tăng Tốc</span>
+        </a>
+        <a href="vong4/" class="round-card">
+            <span class="round-num">Vòng 4</span>
+            <span class="round-name">Về Đích</span>
+        </a>
+    </div>
+
+</body>
+</html>

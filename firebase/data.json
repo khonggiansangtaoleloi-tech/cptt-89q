@@ -1,0 +1,246 @@
+{
+  "diemso": {
+    "doi1": { "diem": 0, "tendoi": "Đội 1" },
+    "doi2": { "diem": 0, "tendoi": "Đội 2" },
+    "doi3": { "diem": 0, "tendoi": "Đội 3" },
+    "doi4": { "diem": 0, "tendoi": "Đội 4" }
+  },
+  
+  "vong1_rieng": {
+    "match_state": {
+      "cauhoihientai": "PREPARE",
+      "doihientai": "Đội 1",
+      "thoigian": 0,
+      "config": {
+        "show": false,
+        "ketvong": false
+      },
+      "dananthisinh": {}
+    },
+    "question_bank": {
+      "goi1": [
+                null,
+                {
+                    "cauhoi": "Ai là tác giả của \"Hịch tướng sĩ\"?",
+                    "dapan": "Trần Hưng Đạo"
+                },
+                {
+                    "cauhoi": "Kim cương và than là hai dạng thù hình của nguyên tố hóa học nào?",
+                    "dapan": "Carbon (C)"
+                },
+                {
+                    "cauhoi": "Ta dùng thiết bị gì để đo giá trị của cường độ dòng điện?",
+                    "dapan": "Ampe kế"
+                },
+                {
+                    "cauhoi": "Tính cos90 độ",
+                    "dapan": "cos90 độ = 0"
+                },
+                {
+                    "cauhoi": "\"Bao giờ người Tây nhổ hết cỏ nước Nam thì mới hết người Nam đánh Tây\" là câu nói của ai?",
+                    "dapan": "Nguyễn Trung Trực"
+                },
+                {
+                    "cauhoi": "On New year's day, children often get this present...",
+                    "dapan": "Lucky money"
+                }
+            ],
+            "goi2": [
+                null,
+                {
+                    "cauhoi": "Trong tác phẩm Lão Hạc, Lão Hạc nuôi con gì?",
+                    "dapan": "Con chó"
+                },
+                {
+                    "cauhoi": "Ở điều kiện thường, kim loại nào tồn tại ở trạng thái lỏng?",
+                    "dapan": "Thủy ngân (Hg)"
+                },
+                {
+                    "cauhoi": "Bàn ủi (bàn là) hoạt động dựa trên tác dụng gì của dòng điện?",
+                    "dapan": "Tác dụng nhiệt"
+                },
+                {
+                    "cauhoi": "Hình hộp chữ nhật có bao nhiêu mặt?",
+                    "dapan": "6 mặt"
+                },
+                {
+                    "cauhoi": "Thực dân Pháp đã nổ súng ở đâu mở đầu quá trình xâm lược Việt Nam?",
+                    "dapan": "Bán đảo Sơn Trà (Đà Nẵng)"
+                },
+                {
+                    "cauhoi": "This is the device which can transmit speech over distances...",
+                    "dapan": "Telephone"
+                }
+            ],
+            "goi3": [
+                null,
+                {
+                    "cauhoi": "Thủ đô của Việt Nam là gì?",
+                    "dapan": "Hà Nội"
+                },
+                {
+                    "cauhoi": "Nguyên tố hóa học nào có ký hiệu là O?",
+                    "dapan": "Oxi"
+                },
+                {
+                    "cauhoi": "What color is the sky on a clear day?",
+                    "dapan": "Blue"
+                },
+                {
+                    "cauhoi": "1 + 1 = ?",
+                    "dapan": "2"
+                },
+                {
+                    "cauhoi": "Ai là người phát minh ra bóng đèn điện?",
+                    "dapan": "Thomas Edison"
+                },
+                {
+                    "cauhoi": "Hành tinh nào gần Mặt Trời nhất?",
+                    "dapan": "Sao Thủy"
+                }
+            ],
+            "goi4": [
+                null,
+                {
+                    "cauhoi": "Việt Nam có bao nhiêu tỉnh/thành phố (2024)?",
+                    "dapan": "63"
+                },
+                {
+                    "cauhoi": "Công thức hóa học của nước là gì?",
+                    "dapan": "H2O"
+                },
+                {
+                    "cauhoi": "Đơn vị đo điện áp là gì?",
+                    "dapan": "Vôn (V)"
+                },
+                {
+                    "cauhoi": "Tác giả của \"Truyện Kiều\" là ai?",
+                    "dapan": "Nguyễn Du"
+                },
+                {
+                    "cauhoi": "Con vật nào được gọi là chúa sơn lâm?",
+                    "dapan": "Con hổ"
+                },
+                {
+                    "cauhoi": "How many days are there in a week?",
+                    "dapan": "7"
+                }
+            ]
+        }
+  },
+
+  "vong1_chung": {
+    "match_state": {
+      "cauhoihientai": "PREPARE",
+      "thoigian": 0,
+      "chuong": {
+        "team_bam": "",
+        "is_locked": false
+      },
+      "config": {
+        "show": false,
+        "ketvong": false
+      }
+    },
+    "question_bank": {
+      "1": { "cauhoi": "Nội dung câu 1 chung", "dapan": "Đáp án 1" },
+      "2": { "cauhoi": "Nội dung câu 2 chung", "dapan": "Đáp án 2" },
+      "3": { "cauhoi": "Nội dung câu 3 chung", "dapan": "Đáp án 3" }
+    }
+  },
+
+"vong2": {
+  "match_state": {
+    "cauhoihientai": "PREPARE",
+    "thoigian": 0,
+    "chuong_cnv": {
+      "team_bam": "",
+      "is_locked": false
+    },
+    "trangthai_hangngang": {
+      "1": "CHUA_MO",
+      "2": "CHUA_MO",
+      "3": "CHUA_MO",
+      "4": "CHUA_MO"
+    },
+    "trangthai_hinhanh": "CHUA_MO"
+  },
+  "question_bank": 
+    {
+    "tukhoa": "ĐIỆN BIÊN PHỦ",
+    "so_kytu": 11,
+    "cauhoi_trungtam": "Tên bản tập đoàn cứ điểm mạnh nhất Đông Dương mà thực dân Pháp đã xây dựng tại lòng chảo Mường Thanh năm 1953 - 1954 là gì?",
+    "link_anh": "https://link-anh-cua-ban.jpg",
+    "hangngang": {
+        "1": {
+        "cauhoi": "Vị Đại tướng, Tổng Tư lệnh trực tiếp chỉ huy chiến dịch lịch sử năm 1954 là ai?",
+        "dapan": "VÕ NGUYÊN GIÁP",
+        "sokytu": 12
+        },
+        "2": {
+        "cauhoi": "Tên cứ điểm mở màn cho chiến dịch Điện Biên Phủ vào chiều ngày 13/3/1954 là gì?",
+        "dapan": "HIM LAM",
+        "sokytu": 6
+        },
+        "3": {
+        "cauhoi": "Anh hùng lực lượng vũ trang nào đã lấy thân mình chèn bánh pháo trong chiến dịch Điện Biên Phủ?",
+        "dapan": "TÔ VĨNH DIỆN",
+        "sokytu": 10
+        },
+        "4": {
+        "cauhoi": "Quả đồi nào là nơi diễn ra trận chiến ác liệt nhất, kéo dài 39 ngày đêm trước khi quân ta làm chủ hoàn toàn?",
+        "dapan": "ĐỒI A1",
+        "sokytu": 5
+        }
+    }
+},
+  "vong3": {
+    "match_state": {
+      "cauhoihientai": "PREPARE",
+      "thoigian": 0,
+      "danan_cacdoi": {
+        "doi1": { "dapan": "", "thoigian_nop": 0 },
+        "doi2": { "dapan": "", "thoigian_nop": 0 },
+        "doi3": { "dapan": "", "thoigian_nop": 0 },
+        "doi4": { "dapan": "", "thoigian_nop": 0 }
+      },
+      "config": {
+        "show_dapan": false
+      }
+    },
+    "question_bank": {
+      "1": { "cauhoi": "Đây là ai?", "dapan": "Trần Hưng Đạo", "loai": "hinhanh", "url": "link_anh_1" },
+      "2": { "cauhoi": "Sắp xếp các sự kiện?", "dapan": "A-C-B", "loai": "video", "url": "link_video_1" },
+      "3": { "cauhoi": "Tìm mật mã?", "dapan": "1234", "loai": "hinhanh", "url": "link_anh_2" },
+      "4": { "cauhoi": "Đoạn nhạc sau nói về bài hát nào?", "dapan": "Tiến quân ca", "loai": "audio", "url": "link_audio_1" }
+    }
+  },
+
+  "vong4": {
+    "match_state": {
+      "doihientai": "Đội 1",
+      "goicauhoi": [20, 20, 30],
+      "cauhoihientai": "PREPARE",
+      "thoigian": 0,
+      "ngoisao_hyvong": false,
+      "chuong_gianhquyen": {
+        "team_bam": "",
+        "is_locked": true
+      },
+      "config": {
+        "show": false,
+        "ketvong": false
+      }
+    },
+    "question_bank": {
+      "cau_20": {
+        "1": { "cauhoi": "Câu 20đ số 1?", "dapan": "Đáp án 1" },
+        "2": { "cauhoi": "Câu 20đ số 2?", "dapan": "Đáp án 2" }
+      },
+      "cau_30": {
+        "1": { "cauhoi": "Câu 30đ số 1?", "dapan": "Đáp án 1" },
+        "2": { "cauhoi": "Câu 30đ số 2?", "dapan": "Đáp án 2" }
+      }
+    }
+  }
+}
