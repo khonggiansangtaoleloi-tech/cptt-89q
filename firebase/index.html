@@ -678,52 +678,43 @@
                 "doi4": { "diem": 0, "tendoi": "Đội 4" }
             },
             "vong1_chung": {
-                "_sync": 1795100777535,
                 "match_state": {
                     "cauhoihientai": "",
-                    "config": { "ketvong": false, "show": false },
-                    "doihientai": "",
-                    "goihientai": "",
-                    "thoigian": 0
+                    "cauhoiopen": "",
+                    "thoiGianKetThuc": 0,
+                    "timerTrigger": 0
                 },
-                "question_bank": {
-                    "goi1": [
-                        null,
-                        { "cauhoi": "Ai là tác giả của “Hịch tướng sĩ”?", "dapan": "Trần Hưng Đạo" },
-                        { "cauhoi": "Kim cương và than là hai dạng thù hình của nguyên tố nào?", "dapan": "Carbon (C)" },
-                        { "cauhoi": "Ta dùng thiết bị gì để đo giá trị của cường độ dòng điện chạy qua một đoạn mạch?", "dapan": "Ampe kế" },
-                        { "cauhoi": "Tính cos90 độ", "dapan": "cos90 độ = 0" },
-                        { "cauhoi": "“Bao giờ người Tây nhổ hết cỏ nước Nam thì mới hết người Nam đánh Tây” là câu nói nổi tiếng của ai?", "dapan": "Nguyễn Trung Trực" },
-                        { "cauhoi": "On New year’s day, children often get this present from their parents and other people. What is the present?", "dapan": "Lucky money." }
-                    ],
-                    "goi2": [
-                        null,
-                        { "cauhoi": "Trong tác phẩm Lão Hạc, Lão Hạc nuôi con gì?", "dapan": "Con chó" },
-                        { "cauhoi": "Ở điều kiện thường, kim loại nào tồn tại ở trạng thái lỏng?", "dapan": "Thủy ngân (Hg)" },
-                        { "cauhoi": "Bàn ủi (bàn là) hoạt động dựa trên tác dụng gì của dòng điện?", "dapan": "Tác dụng nhiệt" },
-                        { "cauhoi": "Hình hộp chữ nhật có bao nhiêu mặt?", "dapan": "6 mặt" },
-                        { "cauhoi": "Thực dân Pháp đã nổ súng ở đâu mở đầu quá trình xâm lược nước ta?", "dapan": "Bán đảo Sơn Trà (Đà Nẵng)" },
-                        { "cauhoi": "This is the device which can transmit speech over a long distance. What is it?", "dapan": "Telephone" }
-                    ],
-                    "goi3": [
-                        null,
-                        { "cauhoi": "Thủ đô của Việt Nam là gì?", "dapan": "Hà Nội" },
-                        { "cauhoi": "Nguyên tố hóa học nào có ký hiệu là O?", "dapan": "Oxi" },
-                        { "cauhoi": "What color is the sky on a clear day?", "dapan": "Blue" },
-                        { "cauhoi": "1 + 1 = ?", "dapan": "2" },
-                        { "cauhoi": "Ai là người phát minh ra bóng đèn điện?", "dapan": "Thomas Edison" },
-                        { "cauhoi": "Hành tinh nào gần Mặt Trời nhất?", "dapan": "Sao Thủy" }
-                    ],
-                    "goi4": [
-                        null,
-                        { "cauhoi": "Việt Nam có bao nhiêu tỉnh/thành phố (2024)?", "dapan": "63" },
-                        { "cauhoi": "Công thức hóa học của nước là gì?", "dapan": "H2O" },
-                        { "cauhoi": "Đơn vị đo điện áp là gì?", "dapan": "Vôn (V)" },
-                        { "cauhoi": "Tác giả của “Truyện Kiều” là ai?", "dapan": "Nguyễn Du" },
-                        { "cauhoi": "Con vật nào được gọi là chúa sơn lâm?", "dapan": "Con hổ" },
-                        { "cauhoi": "How many days are there in a week?", "dapan": "7" }
-                    ]
-                }
+                "question_bank": [
+                    null,
+                    {
+                        "cauhoi": "Rice, corn and wheat mainly provide which group of nutrients?",
+                        "danan": "Carbohydrates (starch)",
+                        "statusdapan": 0,
+                        "sttcau": 1,
+                        "url": ""
+                    },
+                    {
+                        "cauhoi": "Kinh đô của nước Văn Lang được đặt ở đâu?",
+                        "danan": "Phong Châu",
+                        "statusdapan": 0,
+                        "sttcau": 2,
+                        "url": ""
+                    },
+                    {
+                        "cauhoi": "Từ được tạo bởi một tiếng có nghĩa được gọi là từ gì?",
+                        "danan": "Từ đơn",
+                        "statusdapan": 0,
+                        "sttcau": 3,
+                        "url": ""
+                    },
+                    {
+                        "cauhoi": "Chim di trú thường bay theo đội hình giống chữ cái nào?",
+                        "danan": "Chữ V",
+                        "statusdapan": 0,
+                        "sttcau": 4,
+                        "url": ""
+                    }
+                ]
             },
             "vong1_rieng": {
                 "_sync": 1795094256292,
@@ -1123,7 +1114,101 @@
                 };
             }
 
-            // 2. Hàm helper dựng bảng cho Vòng 1 (`vong1_chung`, `vong1_rieng`, `vong1_rieng_sub`)
+            // 2. Bảng `vong1_chung` (Mảng câu hỏi trực tiếp trong question_bank + match_state phẳng)
+            if (json.vong1_chung && typeof json.vong1_chung === 'object') {
+                const nodeObj = json.vong1_chung;
+                const ms = nodeObj.match_state || {};
+                const qb = nodeObj.question_bank;
+                const rows = [];
+
+                if (Array.isArray(qb)) {
+                    qb.forEach((item, idx) => {
+                        if (!item || typeof item !== 'object') return;
+                        const sttVal = Number.isFinite(Number(item.sttcau)) ? Number(item.sttcau) : idx;
+                        rows.push({
+                            _uid: `vong1_chung:${idx}`,
+                            _meta: {
+                                firebasePath: `vong1_chung/question_bank/${idx}`,
+                                rowId: idx,
+                                pkCol: 'sttcau',
+                                rowType: 'vong1_chung_question'
+                            },
+                            _targetPath: `vong1_chung/question_bank/${idx}`,
+                            _patchStatePath: `vong1_chung/match_state`,
+                            sttcau: sttVal,
+                            cauhoi: item.cauhoi ?? '',
+                            danan: item.danan ?? item.dapan ?? '',
+                            statusdapan: Number.isFinite(Number(item.statusdapan)) ? Number(item.statusdapan) : 0,
+                            url: item.url ?? '',
+                            cauhoihientai: ms.cauhoihientai ?? '',
+                            cauhoiopen: ms.cauhoiopen ?? '',
+                            thoiGianKetThuc: Number.isFinite(Number(ms.thoiGianKetThuc)) ? Number(ms.thoiGianKetThuc) : 0,
+                            timerTrigger: Number.isFinite(Number(ms.timerTrigger)) ? Number(ms.timerTrigger) : 0
+                        });
+                    });
+                } else if (qb && typeof qb === 'object') {
+                    Object.entries(qb).forEach(([key, item]) => {
+                        if (!item || typeof item !== 'object') return;
+                        const sttVal = Number.isFinite(Number(item.sttcau)) ? Number(item.sttcau) : (Number.isFinite(Number(key)) ? Number(key) : key);
+                        rows.push({
+                            _uid: `vong1_chung:${key}`,
+                            _meta: {
+                                firebasePath: `vong1_chung/question_bank/${key}`,
+                                rowId: key,
+                                pkCol: 'sttcau',
+                                rowType: 'vong1_chung_question'
+                            },
+                            _targetPath: `vong1_chung/question_bank/${key}`,
+                            _patchStatePath: `vong1_chung/match_state`,
+                            sttcau: sttVal,
+                            cauhoi: item.cauhoi ?? '',
+                            danan: item.danan ?? item.dapan ?? '',
+                            statusdapan: Number.isFinite(Number(item.statusdapan)) ? Number(item.statusdapan) : 0,
+                            url: item.url ?? '',
+                            cauhoihientai: ms.cauhoihientai ?? '',
+                            cauhoiopen: ms.cauhoiopen ?? '',
+                            thoiGianKetThuc: Number.isFinite(Number(ms.thoiGianKetThuc)) ? Number(ms.thoiGianKetThuc) : 0,
+                            timerTrigger: Number.isFinite(Number(ms.timerTrigger)) ? Number(ms.timerTrigger) : 0
+                        });
+                    });
+                }
+
+                if (rows.length === 0) {
+                    rows.push({
+                        _uid: `vong1_chung:_state`,
+                        _meta: {
+                            firebasePath: `vong1_chung/match_state`,
+                            rowId: '_state',
+                            pkCol: 'sttcau',
+                            rowType: 'vong1_chung_state_only'
+                        },
+                        _targetPath: `vong1_chung/match_state`,
+                        _patchStatePath: `vong1_chung/match_state`,
+                        sttcau: 0,
+                        cauhoi: '',
+                        danan: '',
+                        statusdapan: 0,
+                        url: '',
+                        cauhoihientai: ms.cauhoihientai ?? '',
+                        cauhoiopen: ms.cauhoiopen ?? '',
+                        thoiGianKetThuc: Number.isFinite(Number(ms.thoiGianKetThuc)) ? Number(ms.thoiGianKetThuc) : 0,
+                        timerTrigger: Number.isFinite(Number(ms.timerTrigger)) ? Number(ms.timerTrigger) : 0
+                    });
+                }
+
+                catalog['vong1_chung'] = {
+                    name: 'vong1_chung',
+                    badge: 'SCHEMA',
+                    description: 'Ngân hàng câu hỏi & trạng thái vong1_chung',
+                    primaryKey: 'sttcau',
+                    columns: ['sttcau', 'cauhoi', 'danan', 'statusdapan', 'url', 'cauhoihientai', 'cauhoiopen', 'thoiGianKetThuc', 'timerTrigger'],
+                    stateColumns: ['cauhoihientai', 'cauhoiopen', 'thoiGianKetThuc', 'timerTrigger'],
+                    filterColumn: null,
+                    rows
+                };
+            }
+
+            // 3. Hàm helper dựng bảng cho Vòng 1 riêng (`vong1_rieng`, `vong1_rieng_sub`)
             const mapVong1Node = (tableName, nodeObj, basePath, includeLinhVuc = false) => {
                 if (!nodeObj || typeof nodeObj !== 'object') return;
                 const ms = nodeObj.match_state || {};
@@ -1223,9 +1308,6 @@
                 };
             };
 
-            if (json.vong1_chung) {
-                mapVong1Node('vong1_chung', json.vong1_chung, 'vong1_chung', false);
-            }
             if (json.vong1_rieng) {
                 mapVong1Node('vong1_rieng', json.vong1_rieng, 'vong1_rieng', true);
                 if (json.vong1_rieng.vong1_rieng) {
@@ -1233,7 +1315,7 @@
                 }
             }
 
-            // 3. Bảng `vong2` (Vượt chướng ngại vật)
+            // 4. Bảng `vong2` (Vượt chướng ngại vật)
             if (json.vong2 && json.vong2.question_bank) {
                 const ms = json.vong2.match_state || {};
                 const qb = json.vong2.question_bank || {};
@@ -1286,7 +1368,7 @@
                 };
             }
 
-            // 4. Bảng `vong3` (Tăng tốc)
+            // 5. Bảng `vong3` (Tăng tốc)
             if (json.vong3 && Array.isArray(json.vong3.question_bank)) {
                 const ms = json.vong3.match_state || {};
                 const dananDoiJson = JSON.stringify({
@@ -1332,7 +1414,7 @@
                 };
             }
 
-            // 5. Bảng `vong4` (Về đích)
+            // 6. Bảng `vong4` (Về đích)
             if (json.vong4 && json.vong4.question_bank && typeof json.vong4.question_bank === 'object') {
                 const ms = json.vong4.match_state || {};
                 const rows = Object.entries(json.vong4.question_bank).map(([qKey, item]) => {
@@ -2199,6 +2281,8 @@
                 } else if (col === 'sttcau') {
                     const maxStt = rows.filter(r => !r.idgoi || r.idgoi === (sampleRow.idgoi || 'goi1')).reduce((m, r) => Math.max(m, Number(r.sttcau) || 0), 0);
                     defaultVal = maxStt + 1;
+                } else if (col === 'statusdapan' && activeTable.name === 'vong1_chung') {
+                    defaultVal = 0;
                 } else if (col === 'id' && activeTable.name === 'diemso') {
                     defaultVal = `doi${rows.length + 1}`;
                 } else if (col === 'id' && activeTable.name === 'vong4') {
@@ -2234,11 +2318,11 @@
                 </td>`;
             }
 
-            if (col === 'sttcau' || col === 'index' || col === 'diem' || col === 'mucdiem' || col === 'sokytu' || col === 'thoigian_giay') {
+            if (col === 'sttcau' || col === 'index' || col === 'diem' || col === 'mucdiem' || col === 'sokytu' || col === 'thoigian_giay' || col === 'statusdapan') {
                 return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 text-right font-semibold text-slate-900 whitespace-nowrap">${escapeHtml(String(val))}</td>`;
             }
 
-            if (col === 'thoigian') {
+            if (col === 'thoigian' || col === 'thoiGianKetThuc' || col === 'timerTrigger') {
                 return `<td ${dblAttr} class="pma-cell-editable py-1.5 px-3 border-r border-slate-200 text-right text-slate-800 whitespace-nowrap">${escapeHtml(String(val))}</td>`;
             }
 
@@ -2323,8 +2407,11 @@
             if (trimmed === '' || trimmed.toUpperCase() === 'NULL') return '';
 
             // Các cột định danh hoặc văn bản luôn giữ kiểu chuỗi để tránh biến dạng (vd: "1", "20_1", "01")
-            const forceStringCols = ['cauhoihientai', 'doihientai', 'goihientai', 'idgoi', 'id', 'cauhoi', 'danan', 'dapan', 'linhvuc', 'tukhoa', 'url', 'trangthai', 'statusdapan', 'cauhoiopen', 'goi_da_chon'];
+            const forceStringCols = ['cauhoihientai', 'doihientai', 'goihientai', 'idgoi', 'id', 'cauhoi', 'danan', 'dapan', 'linhvuc', 'tukhoa', 'url', 'trangthai', 'cauhoiopen', 'goi_da_chon'];
             if (forceStringCols.includes(colName)) {
+                return rawStr;
+            }
+            if (colName === 'statusdapan' && activeTable?.name !== 'vong1_chung') {
                 return rawStr;
             }
 
@@ -2424,7 +2511,48 @@
                     tendoi: row.tendoi ?? ''
                 });
                 changedPaths.add(path);
-            } else if (tblName === 'vong1_chung' || tblName === 'vong1_rieng' || tblName === 'vong1_rieng_sub') {
+            } else if (tblName === 'vong1_chung') {
+                const isStateOnly = meta.rowType === 'vong1_chung_state_only';
+                const safeIdx = meta.rowId === '_state' ? Number(row.sttcau) : meta.rowId;
+                const sttNum = Number(row.sttcau);
+
+                if (!isStateOnly || (Number.isInteger(sttNum) && sttNum >= 1 && (row.cauhoi || row.danan))) {
+                    const targetIdx = (safeIdx !== undefined && safeIdx !== '' && safeIdx !== null && !Number.isNaN(Number(safeIdx))) ? safeIdx : sttNum;
+                    if (targetIdx !== undefined && targetIdx !== '' && targetIdx !== null && String(targetIdx) !== 'NaN') {
+                        const qPath = `vong1_chung/question_bank/${targetIdx}`;
+                        const statusVal = Number(row.statusdapan);
+                        setByPath(rootDatabaseJson, qPath, {
+                            cauhoi: row.cauhoi ?? '',
+                            danan: row.danan ?? '',
+                            statusdapan: Number.isFinite(statusVal) ? statusVal : 0,
+                            sttcau: Number.isFinite(sttNum) ? sttNum : Number(targetIdx),
+                            url: row.url ?? ''
+                        });
+                        changedPaths.add(qPath);
+                    }
+                }
+
+                let stateChanged = false;
+                if ('cauhoihientai' in updatedFields) {
+                    setByPath(rootDatabaseJson, `vong1_chung/match_state/cauhoihientai`, String(row.cauhoihientai ?? ''));
+                    stateChanged = true;
+                }
+                if ('cauhoiopen' in updatedFields) {
+                    setByPath(rootDatabaseJson, `vong1_chung/match_state/cauhoiopen`, String(row.cauhoiopen ?? ''));
+                    stateChanged = true;
+                }
+                if ('thoiGianKetThuc' in updatedFields) {
+                    const tgkt = Number(row.thoiGianKetThuc);
+                    setByPath(rootDatabaseJson, `vong1_chung/match_state/thoiGianKetThuc`, Number.isFinite(tgkt) ? tgkt : 0);
+                    stateChanged = true;
+                }
+                if ('timerTrigger' in updatedFields) {
+                    const tt = Number(row.timerTrigger);
+                    setByPath(rootDatabaseJson, `vong1_chung/match_state/timerTrigger`, Number.isFinite(tt) ? tt : 0);
+                    stateChanged = true;
+                }
+                if (stateChanged) changedPaths.add(`vong1_chung/match_state`);
+            } else if (tblName === 'vong1_rieng' || tblName === 'vong1_rieng_sub') {
                 const basePath = tblName === 'vong1_rieng_sub' ? 'vong1_rieng/vong1_rieng' : tblName;
                 const isStateOnly = meta.rowType === 'vong1_state_only';
                 const safeGoi = String(meta.groupKey ?? row.idgoi ?? 'goi1').trim();
@@ -2569,7 +2697,19 @@
                     const id = String(newRowObj.id || `doi${activeTable.rows.length + 1}`);
                     syncTargetPath = `diemso/${id}`;
                     setByPath(rootDatabaseJson, syncTargetPath, { diem: Number(newRowObj.diem) || 0, tendoi: newRowObj.tendoi || id });
-                } else if (tblName === 'vong1_chung' || tblName === 'vong1_rieng' || tblName === 'vong1_rieng_sub') {
+                } else if (tblName === 'vong1_chung') {
+                    const arr = getByPath(rootDatabaseJson, `vong1_chung/question_bank`) || [null];
+                    const idx = Number(newRowObj.sttcau) || (Array.isArray(arr) ? arr.length : activeTable.rows.length + 1);
+                    const qObj = {
+                        cauhoi: newRowObj.cauhoi || '',
+                        danan: newRowObj.danan || '',
+                        statusdapan: Number(newRowObj.statusdapan) || 0,
+                        sttcau: idx,
+                        url: newRowObj.url || ''
+                    };
+                    syncTargetPath = `vong1_chung/question_bank/${idx}`;
+                    setByPath(rootDatabaseJson, syncTargetPath, qObj);
+                } else if (tblName === 'vong1_rieng' || tblName === 'vong1_rieng_sub') {
                     const basePath = tblName === 'vong1_rieng_sub' ? 'vong1_rieng/vong1_rieng' : tblName;
                     const goi = String(newRowObj.idgoi || 'goi1');
                     const arr = getByPath(rootDatabaseJson, `${basePath}/question_bank/${goi}`) || [null];
@@ -2759,6 +2899,7 @@
             activeTable.columns.forEach(c => {
                 if (c === 'idgoi') emptyRow[c] = lastRow.idgoi || 'goi1';
                 else if (c === 'sttcau') emptyRow[c] = (Number(lastRow.sttcau) || 0) + 1;
+                else if (c === 'statusdapan' && activeTable.name === 'vong1_chung') emptyRow[c] = 0;
                 else if (activeTable.stateColumns && activeTable.stateColumns.includes(c)) emptyRow[c] = lastRow[c] ?? '';
                 else emptyRow[c] = '';
             });
