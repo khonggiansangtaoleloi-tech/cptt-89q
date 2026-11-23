@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olympia - Vòng 4: Về Đích (Thí sinh)</title>
+    <title>Olympia - Vòng 4: Về Đích (Màn hình Khán giả)</title>
     <script>
 /* =====================================================================
    V4 Core - Đọc riêng api_url từ ../../api/vong4.json và ../../api/diemso.json
@@ -99,26 +99,11 @@ window.V4 = (function () {
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&family=Roboto:wght@500;700&display=swap');
-        body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; background: radial-gradient(circle at center, #002244 0%, #000011 100%); color: white; height: 100vh; overflow: hidden; }
-
-        #setup-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            transform-origin: top left;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            background: radial-gradient(circle at center, #002244 0%, #000011 100%);
-        }
-        .setup-title { font-size: 3.5rem; color: #ffd700; font-family: 'Montserrat', sans-serif; margin-bottom: 40px; text-shadow: 0 0 20px rgba(255,215,0,0.5); text-align: center; }
-        .role-btn { font-size: 1.8rem; padding: 20px 40px; margin: 10px; border-radius: 15px; border: 3px solid #56ccf2; background: rgba(0, 34, 68, 0.8); color: white; cursor: pointer; transition: 0.3s; font-family: 'Montserrat', sans-serif; font-weight: bold; }
-        .role-btn:hover { background: #56ccf2; color: #000; transform: scale(1.05); box-shadow: 0 0 20px #56ccf2; }
+        /* ================= GIAO DIỆN CHUNG (Màu Đại dương) ================= */
+        body { margin: 0; padding: 0; font-family: 'Roboto', sans-serif; background: radial-gradient(circle at top, #0a7ab0 0%, #04304f 50%, #01101d 100%); color: #ffffff; height: 100vh; overflow: hidden; }
 
         #main-game {
-            display: none;
+            display: flex;
             flex-direction: column;
             position: fixed;
             top: 0;
@@ -126,20 +111,40 @@ window.V4 = (function () {
             transform-origin: top left;
         }
 
-        .header { padding: 15px 50px; background: linear-gradient(90deg, rgba(0,0,0,0.8) 0%, rgba(0,34,68,0.8) 50%, rgba(0,0,0,0.8) 100%); border-bottom: 3px solid #ffd700; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
-        .title { font-family: 'Montserrat', sans-serif; font-size: 2.5rem; color: #fff; text-transform: uppercase; letter-spacing: 2px; }
-        .team-name { font-family: 'Montserrat', sans-serif; color: #ffd700; font-size: 2.5rem; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8); display: flex; align-items: center; gap: 15px; }
-        .reset-btn { font-size: 1.5rem; cursor: pointer; opacity: 0.5; transition: 0.2s; }
-        .reset-btn:hover { opacity: 1; transform: rotate(180deg); }
+        /* ================= HEADER & FOOTER ================= */
+        .header { padding: 15px 50px; background: rgba(0,0,0,0.5); border-bottom: 3px solid #ffe27a; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 5px 20px rgba(0,0,0,0.5); }
+        .header-left { display: flex; align-items: center; gap: 20px; }
+        .title { font-family: 'Montserrat', sans-serif; font-size: 2.5rem; color: #ffe27a; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; }
+        .team-name { font-family: 'Montserrat', sans-serif; color: #8eeaff; font-size: 2.3rem; text-shadow: 0 0 18px rgba(127, 227, 255, 0.67), 0 2px 6px rgba(0,0,0,0.8); display: flex; align-items: center; gap: 15px; font-weight: 900; text-transform: uppercase; }
+
+        /* Nút bật/tắt âm thanh trình chiếu */
+        .btn-audio-toggle {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            font-weight: 800;
+            padding: 8px 18px;
+            border-radius: 30px;
+            border: 2px solid #ffd84d;
+            background: rgba(255, 75, 43, 0.85);
+            color: #ffffff;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.25s ease;
+            box-shadow: 0 0 15px rgba(255, 75, 43, 0.6);
+            animation: pulseStar 1.5s infinite;
+        }
+        .btn-audio-toggle:hover { transform: scale(1.05); }
+        .btn-audio-toggle.active { display: none; }
+
         .main-content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; overflow: hidden; }
 
-        .question-box { background: rgba(0, 15, 30, 0.85); border: 3px solid #56ccf2; border-radius: 20px; padding: 25px 40px; width: 95%; max-width: 1480px; font-size: 2.6rem; line-height: 1.5; box-shadow: 0 0 30px rgba(86, 204, 242, 0.2), inset 0 0 20px rgba(86, 204, 242, 0.1); margin-bottom: 15px; text-align: center; position: relative; box-sizing: border-box; }
+        /* ================= KHUNG CÂU HỎI & BỐ CỤC KHUNG ẢNH ================= */
+        .question-box { background: rgba(255, 255, 255, 0.12); border: 3px solid #7fe3ff; border-radius: 15px; padding: 25px 40px; width: 95%; max-width: 1480px; font-size: 2.6rem; line-height: 1.5; box-shadow: 0 0 35px rgba(127, 227, 255, 0.4); margin-bottom: 15px; text-align: center; position: relative; backdrop-filter: blur(5px); box-sizing: border-box; }
 
         .tags-container { margin-bottom: 18px; }
-        .info-tag { display: inline-block; background: linear-gradient(135deg, #0052cc, #003d99); padding: 10px 25px; border-radius: 30px; font-size: 1.5rem; margin: 0 10px; font-family: 'Montserrat', sans-serif; text-transform: uppercase; border: 1px solid #56ccf2; }
-        .star-tag { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; border: 2px solid #fff; box-shadow: 0 0 25px #ffd700; animation: pulseStar 1.5s infinite; }
+        .info-tag { display: inline-block; background: rgba(0,0,0,0.5); padding: 10px 25px; border-radius: 30px; font-size: 1.5rem; margin: 0 10px; font-family: 'Montserrat', sans-serif; text-transform: uppercase; border: 1px solid #7fe3ff; color: #ffffff; font-weight: 800; }
+        .star-tag { background: linear-gradient(135deg, #ffd84d, #d4af37); color: #000; border: 2px solid #ffffff; box-shadow: 0 0 22px rgba(255, 216, 77, 0.8); animation: pulseStar 1.5s infinite; }
 
-        /* Bố cục chia đôi: Câu hỏi bên trái - Khung ảnh bên phải */
         .q-split-container {
             display: flex;
             gap: 35px;
@@ -152,7 +157,8 @@ window.V4 = (function () {
         .q-left-panel {
             flex: 1.15;
             text-align: left;
-            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+            font-weight: 800;
             font-size: 2.3rem;
             line-height: 1.45;
             white-space: pre-wrap;
@@ -163,11 +169,11 @@ window.V4 = (function () {
             justify-content: center;
             align-items: center;
             background: rgba(0, 0, 0, 0.45);
-            border: 3px solid #56ccf2;
+            border: 3px solid #7fe3ff;
             border-radius: 16px;
             padding: 12px;
             min-height: 260px;
-            box-shadow: inset 0 0 20px rgba(86, 204, 242, 0.25), 0 8px 25px rgba(0,0,0,0.5);
+            box-shadow: inset 0 0 20px rgba(127, 227, 255, 0.25), 0 8px 25px rgba(0,0,0,0.5);
         }
         .q-image {
             max-width: 100%;
@@ -179,7 +185,7 @@ window.V4 = (function () {
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
         }
         .img-error-box {
-            color: #ffd700;
+            color: #ffd84d;
             font-size: 1.3rem;
             text-align: center;
             padding: 20px;
@@ -194,186 +200,283 @@ window.V4 = (function () {
             font-family: 'Montserrat', sans-serif;
             font-size: 1.9rem;
             font-weight: 900;
-            color: #28d160;
+            color: #7dffb4;
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-bottom: 16px;
             text-shadow: 0 2px 6px rgba(0,0,0,0.8);
         }
         .ans-long-box {
-            background: rgba(0, 0, 0, 0.65);
-            border: 3px solid #28a745;
+            background: rgba(92, 240, 160, 0.16);
+            border: 3px solid #5cf0a0;
             border-radius: 16px;
             padding: 24px 36px;
-            color: #ffd700;
+            color: #ffd84d;
             font-weight: 800;
             font-style: normal;
             text-align: left;
             white-space: pre-wrap;
             line-height: 1.48;
-            box-shadow: 0 0 25px rgba(40, 167, 69, 0.55);
+            box-shadow: 0 0 25px rgba(92, 240, 160, 0.45), inset 0 0 18px rgba(0, 0, 0, 0.35);
             text-shadow: 0 2px 6px rgba(0,0,0,0.9);
             width: 100%;
             box-sizing: border-box;
         }
 
-        .footer { display: flex; justify-content: space-between; align-items: flex-end; padding: 15px 80px 30px 80px; background: linear-gradient(0deg, rgba(0,0,0,0.9) 0%, transparent 100%); }
+        /* ================= GIAO DIỆN BẢNG ĐIỂM 4 ĐỘI (BangDiem) ================= */
+        .all-scores-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+            margin-top: 25px;
+            padding: 10px;
+        }
+        .score-card-item {
+            background: linear-gradient(180deg, rgba(10, 122, 176, 0.45) 0%, rgba(1, 16, 29, 0.85) 100%);
+            border: 3px solid #7fe3ff;
+            border-radius: 20px;
+            padding: 35px 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(127, 227, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+        .score-card-name {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+        }
+        .score-card-val {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 6rem;
+            font-weight: 900;
+            color: #ffd84d;
+            line-height: 1;
+            text-shadow: 0 0 25px rgba(255, 216, 77, 0.85), 0 4px 8px rgba(0,0,0,0.9);
+        }
+
+        /* ================= GIAO DIỆN BẢNG XẾP HẠNG & TRAO CÚP (KetThucVong4) ================= */
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 1150px;
+            margin: 15px auto 0 auto;
+        }
+        .rank-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 35px;
+            border-radius: 18px;
+            font-family: 'Montserrat', sans-serif;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+        }
+        .rank-row.enter {
+            opacity: 0;
+            animation: slideInRank 0.5s ease forwards;
+        }
+        .rank-row.enter:nth-child(2) { animation-delay: 0.1s; }
+        .rank-row.enter:nth-child(3) { animation-delay: 0.2s; }
+        .rank-row.enter:nth-child(4) { animation-delay: 0.3s; }
+
+        .rank-1 {
+            background: linear-gradient(90deg, rgba(255, 215, 0, 0.35) 0%, rgba(184, 134, 11, 0.15) 50%, rgba(0, 0, 0, 0.7) 100%);
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.45);
+            transform: scale(1.03);
+        }
+        .rank-2 {
+            background: linear-gradient(90deg, rgba(224, 224, 224, 0.3) 0%, rgba(120, 144, 156, 0.15) 50%, rgba(0, 0, 0, 0.7) 100%);
+            border: 3px solid #e0e0e0;
+            box-shadow: 0 0 20px rgba(224, 224, 224, 0.3);
+        }
+        .rank-3 {
+            background: linear-gradient(90deg, rgba(205, 127, 50, 0.35) 0%, rgba(141, 85, 36, 0.15) 50%, rgba(0, 0, 0, 0.7) 100%);
+            border: 3px solid #cd7f32;
+            box-shadow: 0 0 20px rgba(205, 127, 50, 0.3);
+        }
+        .rank-4 {
+            background: rgba(0, 0, 0, 0.55);
+            border: 2px solid #56ccf2;
+            opacity: 0.9;
+        }
+        .rank-left {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            text-align: left;
+        }
+        .cup-icon {
+            font-size: 4rem;
+            line-height: 1;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.6));
+        }
+        .rank-title-badge {
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .rank-team-name {
+            font-size: 2.4rem;
+            font-weight: 900;
+            color: #ffffff;
+            text-transform: uppercase;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+        }
+        .rank-score-val {
+            font-size: 3.8rem;
+            font-weight: 900;
+            color: #ffd84d;
+            text-shadow: 0 0 20px rgba(255, 216, 77, 0.8), 0 2px 6px rgba(0,0,0,0.9);
+        }
+        @keyframes slideInRank {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .rank-4.enter { animation-name: slideInRank4; }
+        @keyframes slideInRank4 {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 0.9; transform: translateY(0); }
+        }
+
+        .footer { display: flex; justify-content: space-between; align-items: flex-end; padding: 15px 80px 30px 80px; background: rgba(0,0,0,0.8); border-top: 3px solid #7fe3ff; }
         .stat-box { display: flex; flex-direction: column; align-items: center; }
-        .stat-label { font-size: 1.8rem; color: #a0c4ff; letter-spacing: 3px; font-family: 'Montserrat', sans-serif; margin-bottom: 5px; text-transform: uppercase; }
-        .stat-value { font-family: 'Montserrat', sans-serif; font-size: 7.2rem; font-weight: 800; color: #ffd700; text-shadow: 0 0 30px rgba(255, 215, 0, 0.9), 2px 2px 0px #000; line-height: 1; }
-        .timer { color: #ff4b2b; text-shadow: 0 0 30px rgba(255, 75, 43, 0.9), 2px 2px 0px #000; transition: color 0.3s; }
+        .stat-label { font-size: 1.8rem; color: #8eeaff; letter-spacing: 3px; font-family: 'Montserrat', sans-serif; margin-bottom: 5px; text-transform: uppercase; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .stat-value { font-family: 'Montserrat', sans-serif; font-size: 7.2rem; font-weight: 900; color: #ffd84d; text-shadow: 0 0 22px rgba(255, 216, 77, 0.8), 0 2px 6px rgba(0,0,0,0.8); line-height: 1; }
+        .timer { color: #ff4b2b; text-shadow: 0 0 22px rgba(255, 75, 43, 0.8), 0 2px 6px rgba(0,0,0,0.8); transition: color 0.3s; }
 
         .q-grids-client { display: flex; gap: 40px; justify-content: center; margin-top: 10px; }
-        .q-col-client { flex: 1; padding: 25px; border-radius: 15px; border: 4px solid; background: rgba(255,255,255,0.95); max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
-        .q-col-20-client { border-color: #28a745; }
-        .q-col-30-client { border-color: #dc3545; }
+        .q-col-client { flex: 1; padding: 25px; border-radius: 15px; border: 4px solid; background: rgba(255, 255, 255, 0.12); max-width: 450px; box-shadow: 0 0 35px rgba(127, 227, 255, 0.4); backdrop-filter: blur(5px); }
+        .q-col-20-client { border-color: #5cf0a0; }
+        .q-col-30-client { border-color: #ff4b2b; }
         .q-col-title-client { text-align: center; font-size: 2rem; font-weight: 900; margin-bottom: 25px; text-transform: uppercase; }
-        .q-col-20-client .q-col-title-client { color: #28a745; }
-        .q-col-30-client .q-col-title-client { color: #dc3545; }
+        .q-col-20-client .q-col-title-client { color: #7dffb4; text-shadow: 0 0 10px #000; }
+        .q-col-30-client .q-col-title-client { color: #ff4b2b; text-shadow: 0 0 10px #000; }
         .q-btn-grid-client { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-        .q-btn-client { padding: 20px 0; font-size: 2.2rem; font-weight: 900; border-radius: 10px; text-align: center; color: white; box-shadow: 0 5px 10px rgba(0,0,0,0.3); }
-        .q-btn-20-client { background: #28a745; }
-        .q-btn-30-client { background: #dc3545; }
+        .q-btn-client { padding: 20px 0; font-size: 2.2rem; font-weight: 900; border-radius: 10px; text-align: center; color: white; box-shadow: 0 5px 10px rgba(0,0,0,0.3); text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        .q-btn-20-client { background: rgba(92, 240, 160, 0.6); border: 2px solid #5cf0a0; }
+        .q-btn-30-client { background: rgba(220, 53, 69, 0.6); border: 2px solid #dc3545; }
 
         .q-btn-client.used { opacity: 0.25; filter: grayscale(100%); }
 
         @keyframes pulseStar { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 
-        .msg-box { font-size: 2.4rem; color: #a0c4ff; font-style: italic; }
-        .ans-short-box { color: #ffd700; font-size: 3.8rem; font-style: normal; font-weight: 900; background: rgba(0,0,0,0.7); padding: 12px 40px; border-radius: 15px; display: inline-block; margin-top: 10px; border: 3px solid #28a745; box-shadow: 0 0 25px rgba(40,167,69,0.6); }
+        .msg-box { font-size: 2.4rem; color: #e6f3fa; font-style: italic; font-weight: 700; }
+        .ans-opened-box { background: rgba(92, 240, 160, 0.2); border: 3px solid #5cf0a0; padding: 12px 40px; border-radius: 12px; color: #ffd84d; font-size: 3.8rem; font-weight: 900; font-style: normal; box-shadow: 0 0 22px rgba(92, 240, 160, 0.6); text-shadow: 0 0 10px #000; display: inline-block; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="setup-screen">
-        <div class="setup-title">XÁC NHẬN THIẾT BỊ MÁY TRẠM</div>
-        <div id="role-buttons">
-            <button class="role-btn" onclick="selectRole('Đội 1')">MÁY ĐỘI 1</button>
-            <button class="role-btn" onclick="selectRole('Đội 2')">MÁY ĐỘI 2</button>
-            <button class="role-btn" onclick="selectRole('Đội 3')">MÁY ĐỘI 3</button>
-            <button class="role-btn" onclick="selectRole('Đội 4')">MÁY ĐỘI 4</button>
-        </div>
-    </div>
-
     <div id="main-game">
         <div class="header">
-            <div class="title">VÒNG 4: VỀ ĐÍCH</div>
-            <div class="team-name"><span id="display-team-name">Đang tải...</span><span class="reset-btn" onclick="resetRole()" title="Đổi máy khác">🔄</span></div>
+            <div class="header-left">
+                <div class="title">VÒNG 4: VỀ ĐÍCH</div>
+                <button id="btn-audio" class="btn-audio-toggle" onclick="toggleAudio()">🔇 BẬT ÂM THANH</button>
+            </div>
+            <div class="team-name">
+                <span id="display-team-name">PHẦN THI CỦA: ĐANG CHỜ...</span>
+            </div>
         </div>
         <div class="main-content">
-            <div class="question-box" id="q-box"><div class="msg-box">Đang kết nối tín hiệu Firebase...</div></div>
+            <div class="question-box" id="q-box">
+                <div class="msg-box">Đang kết nối tín hiệu Firebase...</div>
+            </div>
             <div id="action-area" style="width: 100%; display: flex; justify-content: center; flex-direction: column; align-items: center;"></div>
         </div>
-        <div class="footer">
-            <div class="stat-box"><span class="stat-label" id="score-label-client">ĐIỂM CỦA BẠN</span><span class="stat-value" id="current-score">0</span></div>
-            <div class="stat-box"><span class="stat-label">THỜI GIAN</span><span class="stat-value timer" id="time-left">0s</span></div>
+        <div class="footer" id="audience-footer">
+            <div class="stat-box">
+                <span class="stat-label" id="score-team-label">ĐIỂM SỐ</span>
+                <span class="stat-value" id="current-score">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">THỜI GIAN</span>
+                <span class="stat-value timer" id="time-left">0s</span>
+            </div>
         </div>
     </div>
 
     <script>
-        // Firebase: vong4/{question_bank, TrangThaiV4}, diemso/{doiX: {diem, tendoi}}
         const esc = V4.esc;
 
-        const roleIndexMap = {
-            'Đội 1': 0,
-            'Đội 2': 1,
-            'Đội 3': 2,
-            'Đội 4': 3
+        // ================= QUẢN LÝ ÂM THANH VÒNG 4 =================
+        const SFX = {
+            traLoi: new Audio("../../sound_effect/amthanhv4/30s-v4.mp3"),
+            cuopDiem: new Audio("../../sound_effect/amthanhv4/5s_cuopdiem-v4.mp3")
+        };
+        SFX.traLoi.preload = "auto";
+        SFX.cuopDiem.preload = "auto";
+
+        let audioEnabled = false;
+        let hasInitializedPoll = false;
+
+        function stopAllSounds() {
+            Object.values(SFX).forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+            });
+        }
+
+        function playSound(key) {
+            stopAllSounds();
+            if (!audioEnabled || !SFX[key]) return;
+            SFX[key].currentTime = 0;
+            SFX[key].play().catch(err => console.warn("Không thể phát âm thanh:", err));
+        }
+
+        window.toggleAudio = function() {
+            const btn = document.getElementById('btn-audio');
+            audioEnabled = !audioEnabled;
+            if (audioEnabled) {
+                Object.values(SFX).forEach(a => {
+                    a.muted = true;
+                    const p = a.play();
+                    if (p !== undefined) {
+                        p.then(() => {
+                            a.pause();
+                            a.currentTime = 0;
+                            a.muted = false;
+                        }).catch(() => { a.muted = false; });
+                    } else {
+                        a.muted = false;
+                    }
+                });
+                btn.innerText = "🔊 ÂM THANH: BẬT";
+                btn.classList.add('active');
+            } else {
+                stopAllSounds();
+                btn.innerText = "🔇 BẬT ÂM THANH";
+                btn.classList.remove('active');
+            }
         };
 
-        window.myTeam = localStorage.getItem("olympia_team");
-        window.myTeamIndex = window.myTeam && roleIndexMap[window.myTeam] !== undefined ? roleIndexMap[window.myTeam] : null;
-        window.currentMyTeamName = window.myTeam || "";
-        window.teams = [];
-
+        // Firebase: vong4/{question_bank, TrangThaiV4}, diemso/{doiX: {diem, tendoi}}
+        window.teams = [
+            { doi: 'doi1', tendoi: 'Đội 1', diem: 0 },
+            { doi: 'doi2', tendoi: 'Đội 2', diem: 0 },
+            { doi: 'doi3', tendoi: 'Đội 3', diem: 0 },
+            { doi: 'doi4', tendoi: 'Đội 4', diem: 0 }
+        ];
+        window.activeTeamName = "";
         window.currentStatus = "";
+        window.currentGameState = "";
+        window.rankShown = false;
+
         window.lastTimerTrigger = 0;
         window.localEndTime = null;
-        let pollingStarted = false;
 
         function setHTML(el, html) {
             if (!el || el._lastHtml === html) return;
             el.innerHTML = html;
             el._lastHtml = html;
-        }
-
-        // ================= TỰ ĐỘNG CO GIÃN THEO MỌI MÀN HÌNH =================
-        function autoScaleStage() {
-            const BASE_W = 1920;
-            const BASE_H = 1080;
-            const scale = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H);
-            const w = (window.innerWidth / scale) + 'px';
-            const h = (window.innerHeight / scale) + 'px';
-            const tf = `scale(${scale})`;
-
-            ['setup-screen', 'main-game'].forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.style.width = w;
-                el.style.height = h;
-                el.style.transform = tf;
-            });
-        }
-
-        window.addEventListener('resize', autoScaleStage);
-        autoScaleStage();
-
-        window.onload = function() {
-            autoScaleStage();
-            if (window.myTeam !== null && window.myTeam !== "") {
-                startGameUI();
-            } else {
-                document.getElementById('setup-screen').style.display = 'flex';
-                document.getElementById('main-game').style.display = 'none';
-            }
-            setInterval(updateTimer, 100);
-        };
-
-        window.selectRole = function(role) {
-            window.myTeam = role;
-            window.myTeamIndex = roleIndexMap[role] !== undefined ? roleIndexMap[role] : 0;
-            window.currentMyTeamName = role;
-            localStorage.setItem("olympia_team", role);
-            startGameUI();
-        };
-
-        window.resetRole = function() {
-            localStorage.removeItem("olympia_team");
-            location.reload();
-        };
-
-        function startGameUI() {
-            document.getElementById('setup-screen').style.display = 'none';
-            document.getElementById('main-game').style.display = 'flex';
-            document.getElementById('display-team-name').innerText = "MÁY: " + window.currentMyTeamName;
-            document.getElementById('score-label-client').innerText = window.currentMyTeamName;
-            autoScaleStage();
-
-            if (!pollingStarted) {
-                pollingStarted = true;
-                pollClient();
-            }
-        }
-
-        function updateMyTeamInfo(teams) {
-            window.teams = teams;
-            if (!teams.length) return;
-
-            let myTeamObj = null;
-            if (window.myTeamIndex !== null && teams[window.myTeamIndex]) {
-                myTeamObj = teams[window.myTeamIndex];
-            } else if (window.myTeam) {
-                const match = window.myTeam.match(/\d+/);
-                if (match) {
-                    myTeamObj = teams.find(t => t.doi.toLowerCase() === ("doi" + match[0]));
-                }
-            }
-
-            if (myTeamObj) {
-                window.currentMyTeamName = myTeamObj.tendoi;
-                document.getElementById('display-team-name').innerText = "MÁY: " + myTeamObj.tendoi;
-                document.getElementById('score-label-client').innerText = myTeamObj.tendoi;
-                document.getElementById('current-score').innerText = myTeamObj.diem;
-            }
         }
 
         function findQuestion(fullData, qId) {
@@ -461,7 +564,7 @@ window.V4 = (function () {
         function buildTagsHtml(data) {
             const starHtml = data.ngoiSao ? `<span class="info-tag star-tag">⭐ NGÔI SAO HY VỌNG</span>` : "";
             const teamHtml = `<span class="info-tag">CHỦ NHÀ: ${esc(data.doiDangThi)}</span>`;
-            const ptsHtml = `<span class="info-tag" style="border-color:#28a745;">CÂU ${esc(data.mucDiem)} ĐIỂM</span>`;
+            const ptsHtml = `<span class="info-tag" style="border-color:#5cf0a0; color: #7dffb4;">CÂU ${esc(data.mucDiem)} ĐIỂM</span>`;
             return `<div class="tags-container">${teamHtml} ${ptsHtml} ${starHtml}</div>`;
         }
 
@@ -485,7 +588,7 @@ window.V4 = (function () {
             }
             return `
                 ${tagsHtml}
-                <div style="text-align: center; white-space: pre-wrap; line-height: 1.5; font-size:${qFontSize};">${questionText}</div>
+                <div style="text-align: center; white-space: pre-wrap; line-height: 1.5; font-weight: 800; font-size:${qFontSize}; text-shadow: 0 2px 8px rgba(0,0,0,0.7);">${questionText}</div>
             `;
         }
 
@@ -499,18 +602,156 @@ window.V4 = (function () {
             `;
         }
 
+        function showLeaderboard(qBox) {
+            const html = renderFinalLeaderboard();
+            const changed = qBox._lastHtml !== html;
+            setHTML(qBox, html);
+            if (!window.rankShown) {
+                qBox.querySelectorAll('.rank-row').forEach(r => r.classList.add('enter'));
+                window.rankShown = true;
+            } else if (changed) {
+                qBox.querySelectorAll('.rank-row').forEach(r => r.classList.remove('enter'));
+            }
+        }
+
+        function updateActiveTeamScoreUI() {
+            const topHeaderEl = document.getElementById('display-team-name');
+            const bottomLabelEl = document.getElementById('score-team-label');
+            const bottomScoreEl = document.getElementById('current-score');
+
+            if (window.currentGameState === "BangDiem") {
+                topHeaderEl.innerText = "BẢNG ĐIỂM TRỰC TIẾP";
+                return;
+            }
+            if (window.currentGameState === "KetThucVong4") {
+                topHeaderEl.innerText = "TỔNG KẾT & TRAO GIẢI";
+                return;
+            }
+
+            if (window.activeTeamName && window.activeTeamName.trim() !== "") {
+                topHeaderEl.innerText = "PHẦN THI CỦA: " + window.activeTeamName;
+                bottomLabelEl.innerText = window.activeTeamName;
+
+                let target = window.teams.find(t => t.tendoi === window.activeTeamName);
+                if (!target) {
+                    const match = window.activeTeamName.match(/\d+/);
+                    if (match) {
+                        const num = match[0];
+                        target = window.teams.find(t => t.doi.toLowerCase() === ("doi" + num));
+                    }
+                }
+                if (target) {
+                    bottomScoreEl.innerText = target.diem;
+                }
+            } else {
+                topHeaderEl.innerText = "PHẦN THI CỦA: CHƯA CHỌN";
+                bottomLabelEl.innerText = "ĐIỂM SỐ";
+                bottomScoreEl.innerText = "0";
+            }
+        }
+
+        function renderAllFourScores() {
+            const cardsHtml = window.teams.map(t => `
+                <div class="score-card-item">
+                    <div class="score-card-name">${esc(t.tendoi)}</div>
+                    <div class="score-card-val">${t.diem}</div>
+                </div>
+            `).join('');
+
+            return `
+                <div style="font-family: 'Montserrat', sans-serif; font-size: 2.8rem; color: #ffd84d; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 18px rgba(255, 216, 77, 0.7), 0 2px 6px rgba(0,0,0,0.8);">
+                    ĐIỂM SỐ HIỆN TẠI CỦA CÁC ĐỘI THI
+                </div>
+                <div class="all-scores-grid" style="grid-template-columns: repeat(${Math.max(window.teams.length, 1)}, 1fr);">${cardsHtml}</div>
+            `;
+        }
+
+        function renderFinalLeaderboard() {
+            const teamsList = window.teams.map(t => ({
+                key: t.doi,
+                name: t.tendoi,
+                score: t.diem
+            }));
+
+            teamsList.sort((a, b) => b.score - a.score);
+
+            const rankConfigs = [
+                { label: 'HẠNG NHẤT - CÚP VÀNG', rowClass: 'rank-1', labelColor: '#ffd700', icons: ['🏆', '👑', '🌟', '💎'] },
+                { label: 'HẠNG NHÌ - CÚP BẠC',   rowClass: 'rank-2', labelColor: '#e0e0e0', icons: ['🥈', '🏅', '💠', '🔷'] },
+                { label: 'HẠNG BA - CÚP ĐỒNG',   rowClass: 'rank-3', labelColor: '#ffb07c', icons: ['🥉', '🎗️', '🔶', '🔸'] },
+                { label: 'GIẢI KHUYẾN KHÍCH',    rowClass: 'rank-4', labelColor: '#8eeaff', icons: ['🎖️', '🏵️', '⭐', '🔹'] }
+            ];
+
+            let groupStart = 0;
+            let currentRankIdx = 0;
+
+            const rowsHtml = teamsList.map((team, idx) => {
+                if (idx > 0 && team.score < teamsList[idx - 1].score) {
+                    currentRankIdx = idx;
+                    groupStart = idx;
+                }
+                const cfg = rankConfigs[Math.min(currentRankIdx, 3)];
+                const icon = cfg.icons[Math.min(idx - groupStart, cfg.icons.length - 1)];
+                return `
+                    <div class="rank-row ${cfg.rowClass}">
+                        <div class="rank-left">
+                            <span class="cup-icon">${icon}</span>
+                            <div>
+                                <span class="rank-title-badge" style="color: ${cfg.labelColor};">${cfg.label}</span>
+                                <div class="rank-team-name">${esc(team.name)}</div>
+                            </div>
+                        </div>
+                        <div class="rank-score-val">${team.score} <span style="font-size: 2rem;">ĐIỂM</span></div>
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div style="font-family: 'Montserrat', sans-serif; font-size: 2.6rem; color: #ffd84d; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; text-shadow: 0 0 20px rgba(255, 216, 77, 0.8), 0 2px 6px rgba(0,0,0,0.8);">
+                    🏆 BẢNG XẾP HẠNG CHUNG CUỘC - VÒNG VỀ ĐÍCH 🏆
+                </div>
+                <div class="ranking-list">${rowsHtml}</div>
+            `;
+        }
+
         function renderGameState(fullData) {
             const data = Object.assign({}, (fullData && fullData.TrangThaiV4) || {});
 
-            if (data.timerTrigger && data.timerTrigger !== window.lastTimerTrigger) {
+            window.currentGameState = data.trangThaiGame || "";
+            if (window.currentGameState !== "KetThucVong4") window.rankShown = false;
+            window.activeTeamName = data.doiDangThi || "";
+            updateActiveTeamScoreUI();
+
+            const footerEl = document.getElementById('audience-footer');
+            if (data.trangThaiGame === "BangDiem" || data.trangThaiGame === "KetThucVong4") {
+                footerEl.style.display = "none";
+            } else {
+                footerEl.style.display = "flex";
+            }
+
+            if (!hasInitializedPoll) {
+                window.lastTimerTrigger = data.timerTrigger || 0;
+                hasInitializedPoll = true;
+            } else if (data.timerTrigger && data.timerTrigger !== window.lastTimerTrigger) {
                 window.lastTimerTrigger = data.timerTrigger;
                 if (data.thoiGianKetThuc > 0) {
                     window.localEndTime = Date.now() + data.thoiGianKetThuc;
+                    if (data.trangThaiGame === "TraLoi") {
+                        playSound("traLoi");
+                    } else if (data.trangThaiGame === "CuopDiem") {
+                        playSound("cuopDiem");
+                    }
                 } else {
                     window.localEndTime = null;
+                    stopAllSounds();
                 }
             } else if (!data.timerTrigger || data.timerTrigger === 0) {
                 window.localEndTime = null;
+                stopAllSounds();
+            }
+
+            if (data.trangThaiGame !== "TraLoi" && data.trangThaiGame !== "CuopDiem") {
+                stopAllSounds();
             }
 
             data.question = findQuestion(fullData, data.cauHoiHienTai);
@@ -523,42 +764,37 @@ window.V4 = (function () {
                 window.currentStatus = statusKey;
             }
 
-            const isMainTeam = (window.currentMyTeamName === data.doiDangThi);
-
             if (data.trangThaiGame === "BangDiem") {
-                setHTML(qBox, `<div class="msg-box" style="font-size: 2.8rem; color: #ffd700; font-weight: bold; text-transform: uppercase;">📊 ĐANG TRÌNH CHIẾU BẢNG ĐIỂM 4 ĐỘI<br><span style="font-size:2rem; margin-top:15px; display:inline-block; color:#a0c4ff; font-weight: normal; text-transform: none;">Mời các đội chú ý lên Màn hình chính!</span></div>`);
+                setHTML(qBox, renderAllFourScores());
                 setHTML(actArea, '');
             }
             else if (data.trangThaiGame === "KetThucVong4") {
-                setHTML(qBox, `<div class="msg-box" style="font-size: 2.8rem; color: #ffd700; font-weight: bold; text-transform: uppercase;">🏆 TỔNG KẾT & TRAO GIẢI VÒNG VỀ ĐÍCH 🏆<br><span style="font-size:2rem; margin-top:15px; display:inline-block; color:#a0c4ff; font-weight: normal; text-transform: none;">Chúc mừng các đội đã hoàn thành xuất sắc phần thi!</span></div>`);
+                showLeaderboard(qBox);
                 setHTML(actArea, '');
             }
             else if (data.trangThaiGame === "ChonGoi") {
                 if (data.goiCauHoi && data.goiCauHoi !== "") {
-                    setHTML(qBox, `<div style="font-size: 3rem; color: #ffd700; font-weight: bold; text-transform: uppercase;">GÓI ĐIỂM CỦA ${esc(data.doiDangThi)} LÀ:</div>`);
+                    setHTML(qBox, `<div style="font-size: 3rem; color: #ffd84d; font-weight: 900; text-transform: uppercase; text-shadow: 0 0 12px rgba(255, 216, 77, 0.55), 0 2px 6px rgba(0,0,0,0.8);">GÓI ĐIỂM CỦA ${esc(data.doiDangThi)} LÀ:</div>`);
                     setHTML(actArea, renderBeautifulPackage(data.goiCauHoi));
                 } else {
-                    setHTML(qBox, `<div style="font-size: 3rem; color: #a0c4ff; font-style: italic; animation: pulseStar 2s infinite;">Đang chờ MC chọn gói điểm cho ${esc(data.doiDangThi)}...</div>`);
+                    setHTML(qBox, `<div style="font-size: 3rem; color: #e6f3fa; font-style: italic; animation: pulseStar 2s infinite; font-weight: 700;">Đang chờ MC chọn gói điểm cho ${esc(data.doiDangThi)}...</div>`);
                     setHTML(actArea, '');
                 }
             }
             else if (data.trangThaiGame === "KetThuc") {
-                setHTML(qBox, `<div class="msg-box" style="font-size: 2.8rem; color: #56ccf2; font-weight: bold; text-transform: uppercase;">ĐÃ KẾT THÚC PHẦN THI CỦA ${esc(data.doiDangThi || "ĐỘI NÀY")}.<br><span style="font-size:2rem; margin-top:15px; display:inline-block; color:#a0c4ff; font-weight: normal; text-transform: none;">Mời các đội chú ý lên Màn hình chính để xem điểm.</span></div>`);
+                setHTML(qBox, `<div class="msg-box" style="font-size: 2.8rem; color: #8eeaff; font-weight: 900; text-transform: uppercase; text-shadow: 0 0 18px rgba(127, 227, 255, 0.67), 0 2px 6px rgba(0,0,0,0.8);">ĐÃ KẾT THÚC PHẦN THI CỦA ${esc(data.doiDangThi || "ĐỘI NÀY")}.<br><span style="font-size:2rem; margin-top:15px; display:inline-block; color:#e6f3fa; font-weight: 700; text-transform: none; text-shadow: none;">Chúc mừng đội thi đã hoàn thành phần thi Về Đích!</span></div>`);
                 setHTML(actArea, '');
             }
             else if (data.trangThaiGame === "Cho") {
                 setHTML(qBox, `
                     ${buildTagsHtml(data)}
-                    <span style='font-size: 5rem; color: #56ccf2; letter-spacing: 15px; font-weight: bold;'>???</span>
+                    <span style='font-size: 5rem; color: #8eeaff; letter-spacing: 15px; font-weight: 900; text-shadow: 0 0 18px rgba(127, 227, 255, 0.67), 0 2px 6px rgba(0,0,0,0.8);'>???</span>
                 `);
 
                 if (data.ngoiSao) {
-                    const starMsg = isMainTeam
-                        ? "⭐ ĐỘI CỦA BẠN ĐÃ BẬT NGÔI SAO HY VỌNG! ⭐"
-                        : `⭐ ${esc(data.doiDangThi)} ĐÃ BẬT NGÔI SAO HY VỌNG! ⭐`;
-                    setHTML(actArea, `<div class="msg-box" style="font-size: 3rem; color: #ffd700; font-weight: bold; text-transform: uppercase; animation: pulseStar 1.5s infinite;">${starMsg}</div>`);
+                    setHTML(actArea, `<div class="msg-box" style="font-size: 3rem; color: #ffd84d; font-weight: 900; text-transform: uppercase; animation: pulseStar 1.5s infinite; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">⭐ ${esc(data.doiDangThi)} ĐÃ CHỌN NGÔI SAO HY VỌNG! ⭐</div>`);
                 } else {
-                    setHTML(actArea, `<div class="msg-box" style="font-size: 2.5rem; color: #56ccf2; font-weight: bold; text-transform: uppercase;">${esc(data.doiDangThi)} CHUẨN BỊ...</div>`);
+                    setHTML(actArea, `<div class="msg-box" style="font-size: 2.5rem; color: #8eeaff; font-weight: 900; text-transform: uppercase; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">${esc(data.doiDangThi)} CHUẨN BỊ...</div>`);
                 }
             }
             else if (data.trangThaiGame === "HienDapAn") {
@@ -570,7 +806,7 @@ window.V4 = (function () {
                 } else {
                     // Đáp án ngắn -> giữ đề ở trên, đáp án nổi bật ở dưới
                     setHTML(qBox, buildQuestionContent(data));
-                    setHTML(actArea, `<div class="msg-box" style="color:#28d160; font-weight:bold; font-size: 2.1rem; font-style:normal; text-align:center;">ĐÁP ÁN CHÍNH THỨC CỦA CHƯƠNG TRÌNH:<br><span class="ans-short-box">${esc(rawAns)}</span></div>`);
+                    setHTML(actArea, `<div class="msg-box" style="color:#7dffb4; font-weight:900; font-size: 2.1rem; font-style:normal; text-align:center; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">ĐÁP ÁN CHÍNH THỨC CỦA CHƯƠNG TRÌNH:<br><span class="ans-opened-box">${esc(rawAns)}</span></div>`);
                 }
             }
             else if (data.trangThaiGame === "ChonCauHoi" || data.trangThaiGame === "ChuanBi" || !data.cauHoiHienTai || data.cauHoiHienTai === "") {
@@ -581,7 +817,7 @@ window.V4 = (function () {
                 const html30 = arr12.map(i => `<div class="q-btn-client q-btn-30-client${usedSet.has(`30_${i}`) ? ' used' : ''}">${i}</div>`).join('');
 
                 const gridHtml = `
-                    <div style="font-size: 2.5rem; color: #ffd700; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,215,0,0.5);">🎙 MỜI ${esc(data.doiDangThi || "THÍ SINH")} CHỌN CÂU HỎI</div>
+                    <div style="font-size: 2.5rem; color: #ffd84d; font-weight: 900; text-transform: uppercase; margin-bottom: 10px; text-shadow: 0 0 12px rgba(255, 216, 77, 0.55), 0 2px 6px rgba(0,0,0,0.8);">🎙 MỜI ${esc(data.doiDangThi || "THÍ SINH")} CHỌN CÂU HỎI</div>
                     <div class="q-grids-client">
                         <div class="q-col-client q-col-20-client">
                             <div class="q-col-title-client">BẢNG 20 ĐIỂM</div>
@@ -601,13 +837,12 @@ window.V4 = (function () {
 
                 if (data.trangThaiGame === "TraLoi") {
                     if (window.localEndTime === null || (window.localEndTime - Date.now()) > 0) {
-                        if (isMainTeam) setHTML(actArea, `<div class="msg-box" style="color:#ffd700; font-weight:bold; font-size: 3rem; text-shadow: 0 0 15px rgba(255,215,0,0.5); text-transform: uppercase;">🎙 HÃY TRẢ LỜI TRỰC TIẾP!</div>`);
-                        else setHTML(actArea, `<div class="msg-box" style="font-size: 2.2rem;">Đang trong thời gian suy nghĩ của ${esc(data.doiDangThi)}...</div>`);
+                        setHTML(actArea, `<div class="msg-box" style="font-size: 2.3rem; color: #ffd84d; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">⏱ Đang trong thời gian suy nghĩ và trả lời của ${esc(data.doiDangThi)}...</div>`);
                     }
                 }
                 else if (data.trangThaiGame === "CuopDiem") {
                     if (window.localEndTime === null || (window.localEndTime - Date.now()) > 0) {
-                        setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:bold; font-size: 2.8rem; text-shadow: 0 0 15px rgba(255,75,43,0.5); text-transform: uppercase; text-align:center;">🚨 THỜI GIAN CƯỚP ĐIỂM 🚨<br><span style="font-size:2rem; color:#fff;">Các đội giơ tay giành quyền trả lời!</span></div>`);
+                        setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:900; font-size: 2.8rem; text-shadow: 0 0 22px rgba(255, 75, 43, 0.8), 0 2px 6px rgba(0,0,0,0.8); text-transform: uppercase; text-align:center;">🚨 THỜI GIAN GIÀNH QUYỀN TRẢ LỜI 🚨<br><span style="font-size:2rem; color:#ffffff; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">Mời các đội còn lại giơ tay cướp điểm!</span></div>`);
                     }
                 }
             }
@@ -617,11 +852,12 @@ window.V4 = (function () {
             const pkgs = pkgStr.split(',');
             let displayHtml = '<div style="display: flex; gap: 40px; justify-content: center; margin-top: 10px;">';
             pkgs.forEach((p, idx) => {
-                const pColor = (p === '20') ? 'linear-gradient(135deg, #ff416c, #ff4b2b)' : 'linear-gradient(135deg, #0052cc, #003d99)';
-                const shadow = (p === '20') ? 'rgba(255,65,108,0.6)' : 'rgba(0,82,204,0.6)';
+                const pColor = (p === '20') ? 'rgba(92, 240, 160, 0.6)' : 'rgba(220, 53, 69, 0.6)';
+                const border = (p === '20') ? '#5cf0a0' : '#dc3545';
+                const shadow = (p === '20') ? 'rgba(92, 240, 160, 0.6)' : 'rgba(220, 53, 69, 0.6)';
                 displayHtml += `<div style="text-align:center;">
-                    <div style="font-size:1.5rem; font-weight:bold; color:#a0c4ff; margin-bottom:10px; text-transform:uppercase;">Câu ${idx + 1}</div>
-                    <div style="background: ${pColor}; padding: 25px 50px; border-radius: 20px; font-size: 5rem; font-weight: 800; color: white; box-shadow: 0 15px 35px ${shadow}; border: 4px solid #fff; font-family: 'Montserrat', sans-serif;">${esc(p)}</div>
+                    <div style="font-size:1.5rem; font-weight:900; color:#ffffff; margin-bottom:10px; text-transform:uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Câu ${idx + 1}</div>
+                    <div style="background: ${pColor}; padding: 25px 50px; border-radius: 20px; font-size: 5rem; font-weight: 900; color: white; box-shadow: 0 0 22px ${shadow}; border: 4px solid ${border}; font-family: 'Montserrat', sans-serif; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">${esc(p)}</div>
                 </div>`;
             });
             displayHtml += '</div>';
@@ -650,9 +886,9 @@ window.V4 = (function () {
                 timeElement.innerText = "0s";
                 const actArea = document.getElementById('action-area');
                 if (window.currentStatus.includes("TraLoi")) {
-                    setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:bold; font-size: 2.5rem; text-align:center;">⏳ HẾT THỜI GIAN TRẢ LỜI!</div>`);
+                    setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:900; font-size: 2.5rem; text-align:center; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">⏳ HẾT THỜI GIAN TRẢ LỜI!</div>`);
                 } else if (window.currentStatus.includes("CuopDiem")) {
-                    setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:bold; font-size: 2.5rem; text-transform: uppercase;">⏳ Hết thời gian cướp điểm!</div>`);
+                    setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:900; font-size: 2.5rem; text-transform: uppercase; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">⏳ HẾT THỜI GIAN CƯỚP ĐIỂM!</div>`);
                 }
             } else {
                 const seconds = Math.ceil(dist / 1000);
@@ -660,21 +896,45 @@ window.V4 = (function () {
             }
         }
 
-        async function pollClient() {
+        async function pollAudience() {
             try {
                 const [v4, ds] = await Promise.all([V4.get("vong4"), V4.get("diemso")]);
-                updateMyTeamInfo(V4.teamsFrom(ds || {}));
+                const parsedTeams = V4.teamsFrom(ds || {});
+                if (parsedTeams.length > 0) {
+                    window.teams = parsedTeams;
+                }
                 renderGameState(v4 || {});
             } catch (err) {
                 console.error("Lỗi lấy dữ liệu Firebase:", err);
                 const qBox = document.getElementById('q-box');
-                if (!window.currentStatus) {
+                if (!window.currentGameState) {
                     setHTML(qBox, `<div class="msg-box" style="color:#ff4b2b;">⚠️ Lỗi kết nối Firebase: ${esc(err.message)}</div>`);
                 }
             } finally {
-                setTimeout(pollClient, 500);
+                setTimeout(pollAudience, 500);
             }
         }
+
+        // ================= TỰ ĐỘNG CO GIÃN THEO MỌI MÀN HÌNH =================
+        function autoScaleStage() {
+            const stage = document.getElementById('main-game');
+            if (!stage) return;
+            const BASE_W = 1920;
+            const BASE_H = 1080;
+            const scale = Math.min(window.innerWidth / BASE_W, window.innerHeight / BASE_H);
+
+            stage.style.width = (window.innerWidth / scale) + 'px';
+            stage.style.height = (window.innerHeight / scale) + 'px';
+            stage.style.transform = `scale(${scale})`;
+        }
+
+        window.addEventListener('resize', autoScaleStage);
+        autoScaleStage();
+
+        window.onload = function() {
+            pollAudience();
+            setInterval(updateTimer, 100);
+        };
     </script>
 </body>
 </html>
