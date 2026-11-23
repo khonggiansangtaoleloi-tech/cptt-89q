@@ -420,8 +420,10 @@ window.V4 = (function () {
 
         function stopAllSounds() {
             Object.values(SFX).forEach(a => {
-                a.pause();
-                a.currentTime = 0;
+                if (!a.paused || a.currentTime > 0) {
+                    a.pause();
+                    a.currentTime = 0;
+                }
             });
         }
 
@@ -870,6 +872,7 @@ window.V4 = (function () {
                 timeElement.innerText = "0s";
                 timeElement.style.color = "#ff4b2b";
                 window.localEndTime = null;
+                stopAllSounds();
                 return;
             }
 
@@ -884,6 +887,7 @@ window.V4 = (function () {
 
             if (dist <= 0) {
                 timeElement.innerText = "0s";
+                stopAllSounds();
                 const actArea = document.getElementById('action-area');
                 if (window.currentStatus.includes("TraLoi")) {
                     setHTML(actArea, `<div class="msg-box" style="color:#ff4b2b; font-weight:900; font-size: 2.5rem; text-align:center; text-shadow: 0 2px 6px rgba(0,0,0,0.8);">⏳ HẾT THỜI GIAN TRẢ LỜI!</div>`);
