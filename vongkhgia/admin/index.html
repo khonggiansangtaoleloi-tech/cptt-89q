@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Olympia - Điều Khiển Vòng Khán Giả</title>
+    <style>
+        /* TỔNG THỂ GIAO DIỆN ADMIN HUB */
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #002244 0%, #000011 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        /* HEADER / TIÊU ĐỀ */
+        .header {
+            text-align: center;
+            margin-bottom: 45px;
+            animation: fadeInDown 0.9s ease-out;
+        }
+
+        /* LOGO */
+        .logo {
+            width: 112px;
+            height: auto;
+            margin-bottom: 18px;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));
+            border-radius: 50%;
+        }
+
+        .header h1 {
+            color: #ffd700;
+            font-size: 3.1rem;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 3.5px;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 2px 2px 5px rgba(0, 0, 0, 0.8);
+        }
+
+        .header p {
+            color: #ff416c;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px rgba(255, 65, 108, 0.5);
+        }
+
+        /* KHUNG CHỨA 1 NÚT DUY NHẤT */
+        .single-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            max-width: 560px;
+            animation: fadeInUp 0.9s ease-out 0.25s backwards;
+        }
+
+        /* THẺ NÚT VÀO VÒNG KHÁN GIẢ */
+        .round-card {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid #56ccf2;
+            border-radius: 22px;
+            padding: 52px 32px;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.35s ease;
+            box-shadow: 0 0 28px rgba(86, 204, 242, 0.25);
+            cursor: pointer;
+        }
+
+        .round-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(
+                to right,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.22) 50%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            transform: skewX(-25deg);
+            transition: all 0.65s ease;
+        }
+
+        .round-card:hover {
+            transform: translateY(-10px) scale(1.03);
+            border-color: #ffd700;
+            box-shadow: 0 18px 42px rgba(255, 215, 0, 0.42);
+            background: rgba(255, 215, 0, 0.07);
+        }
+
+        .round-card:hover::before {
+            left: 200%;
+        }
+
+        .round-card:hover .round-num {
+            color: #ffffff;
+        }
+
+        .round-card:hover .round-name {
+            color: #ffd700;
+            text-shadow: 0 0 22px rgba(255, 215, 0, 0.85);
+        }
+
+        .round-card:hover .enter-badge {
+            background: #ffd700;
+            color: #001a33;
+            box-shadow: 0 0 22px rgba(255, 215, 0, 0.7);
+            transform: scale(1.05);
+        }
+
+        .round-num {
+            font-size: 1.3rem;
+            color: #bbbbbb;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 14px;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+
+        .round-name {
+            font-size: 2.7rem;
+            font-weight: bold;
+            color: #56ccf2;
+            margin: 0 0 28px 0;
+            line-height: 1.25;
+            transition: 0.3s;
+            text-shadow: 0 0 16px rgba(86, 204, 242, 0.55);
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .enter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 36px;
+            border-radius: 999px;
+            background: rgba(86, 204, 242, 0.18);
+            border: 1.5px solid #56ccf2;
+            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        /* HIỆU ỨNG XUẤT HIỆN */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* TỐI ƯU CHO TABLET & ĐIỆN THOẠI */
+        @media screen and (max-width: 768px) {
+            .header h1 { font-size: 2.2rem; }
+            .header p { font-size: 1.05rem; letter-spacing: 2.5px; }
+            .logo { width: 88px; }
+            .round-card { padding: 40px 22px; }
+            .round-name { font-size: 2rem; }
+            .enter-badge { font-size: 1.1rem; padding: 12px 28px; }
+        }
+
+        @media screen and (max-width: 480px) {
+            .header h1 { font-size: 1.75rem; letter-spacing: 2px; }
+            .logo { width: 74px; }
+            .round-name { font-size: 1.65rem; }
+            .round-num { font-size: 1.05rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <img src="https://media.leloipt.edu.vn/Media/30_TH1041/Images/footer-logo-leloi83f2a8da-5-e.png" alt="Logo Trường Lê Lợi" class="logo">
+        <h1>HỆ THỐNG ĐIỀU KHIỂN</h1>
+        <p>🔴 Chỉ Dành Cho Ban Tổ Chức 🔴</p>
+    </div>
+
+    <div class="single-container">
+        <a href="vongkhgia/" class="round-card">
+            <span class="round-num">Giao Lưu Trực Tiếp</span>
+            <span class="round-name">Vòng Chơi Khán Giả</span>
+            <span class="enter-badge">Vào Vòng Chơi ▶</span>
+        </a>
+    </div>
+
+</body>
+</html>

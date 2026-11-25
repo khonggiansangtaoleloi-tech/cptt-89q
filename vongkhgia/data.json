@@ -1,0 +1,82 @@
+{
+    "match_state": {
+        "cauhoihientai": "",
+        "cauhoiopen": "",
+        "thoiGianKetThuc": 0,
+        "timerTrigger": 0
+    },
+    "question_bank": [
+        null,
+        {
+            "cauhoi": "Có khi nào con ốc sên đi quanh trái đất trong 5 phút không?\n Giải thích tại sao?",
+            "danan": "Chú ốc sên bò qua bản đồ.",
+            "statusdapan": 0,
+            "sttcau": 1,
+            "url": "https://raw.githubusercontent.com/khonggiansangtaoleloi-tech/up-img/main/up-img/89-cau1-1795582094839-tce6k.jpg"
+        },
+        {
+            "cauhoi": "Một người có 3 con trai và mỗi con trai đều có 2 chị gái. Hỏi gia đình đó có tổng cộng bao nhiêu người con?",
+            "danan": "5",
+            "statusdapan": 0,
+            "sttcau": 2,
+            "url": ""
+        },
+        {
+            "cauhoi": "Một chuyến xe bus chở 10 người. \nỞ trạm đầu 2 người xuống, 3 người lên. \nTrạm 2: 4 người xuống, 1 người lên. \nHỏi trên xe còn bao nhiêu người?",
+            "danan": "8 người",
+            "statusdapan": 0,
+            "sttcau": 3,
+            "url": ""
+        },
+        {
+            "cauhoi": "Cái gì càng đi càng lùi? ",
+            "danan": "Kim đồng hồ (kim giây quay ngược thì lùi thời gian). ",
+            "statusdapan": 0,
+            "sttcau": 4,
+            "url": ""
+        },
+        {
+            "cauhoi": "Em đang chơi bóng, quả bóng lăn lại gần con chó đang bị cột vào sợi dây và cột vào gốc cây. \nCon chó rất dữ và không rời mắt khỏi em 1 giây nào. \nLàm cách nào để em có thể dùng tay lấy được quả bóng mà không bị chó cắn?",
+            "danan": "Đi vòng quanh cái cây, con chó đi theo \n(do không rời mắt khỏi em), đến khi con cho xa quả bóng thì lại lấy quả bóng. ",
+            "statusdapan": 0,
+            "sttcau": 5,
+            "url": ""
+        },
+        {
+            "cauhoi": "A doctor gives you 3 pills and tells you to take one every 30 minutes. How long will the pills last?",
+            "danan": "60 minutes",
+            "statusdapan": 0,
+            "sttcau": 6,
+            "url": ""
+        },
+        {
+            "cauhoi": "ĐUỔI HÌNH BẮT CHỮ\nĐây là từ gì?",
+            "danan": "Gián đoạn",
+            "statusdapan": 0,
+            "sttcau": 7,
+            "url": "https://raw.githubusercontent.com/khonggiansangtaoleloi-tech/up-img/main/up-img/89-cau7-1795582297728-530ta.jpg"
+        },
+        {
+            "cauhoi": "ĐUỔI HÌNH BẮT CHỮ\nĐây là từ gì?",
+            "danan": "Phong thuỷ",
+            "statusdapan": 0,
+            "sttcau": 8,
+            "url": "https://raw.githubusercontent.com/khonggiansangtaoleloi-tech/up-img/main/up-img/89-cau8-1795582413918-et2se.jpg"
+        },
+        {
+            "cauhoi": "ĐUỔI HÌNH BẮT CHỮ\nĐây là câu thành ngữ gì?",
+            "danan": "Lên voi xuống chó",
+            "statusdapan": 0,
+            "sttcau": 9,
+            "url": "https://raw.githubusercontent.com/khonggiansangtaoleloi-tech/up-img/main/up-img/89-cau9-1795582561739-3tp2e.jpg"
+        }
+        ,
+        {
+            "cauhoi": "Cái gì của mình nhưng không ai nhận?",
+            "danan": "Lông mày, lông mi",
+            "statusdapan": 0,
+            "sttcau": 10,
+            "url": ""
+        }
+    ]
+}
