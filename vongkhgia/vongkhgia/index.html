@@ -366,6 +366,74 @@ window.V1C = (function () {
             overflow: hidden;
             box-shadow: inset 0 0 20px rgba(127, 227, 255, 0.25), 0 8px 25px rgba(0,0,0,0.5);
         }
+
+        /* Bố cục ảnh đơn căn chính giữa khi không có chữ câu hỏi */
+        .q-center-image-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin-top: 8px;
+            margin-bottom: 12px;
+        }
+        .q-center-panel {
+            width: 78%;
+            max-width: 1120px;
+            height: 560px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.45);
+            border: 3px solid #7fe3ff;
+            border-radius: 16px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(127, 227, 255, 0.25), 0 8px 25px rgba(0,0,0,0.5);
+        }
+
+        /* Bố cục so sánh khi mở đáp án: Ảnh câu hỏi bên trái -> Mũi tên -> Ảnh đáp án bên phải */
+        .q-compare-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            width: 100%;
+            margin-top: 8px;
+            margin-bottom: 12px;
+        }
+        .q-compare-panel {
+            flex: 1;
+            max-width: 710px;
+            height: 520px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.45);
+            border: 3px solid #7fe3ff;
+            border-radius: 16px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(127, 227, 255, 0.25), 0 8px 25px rgba(0,0,0,0.5);
+        }
+        .q-compare-panel.compact {
+            height: 410px;
+        }
+        .q-compare-panel.answer-side {
+            border-color: #5cf0a0;
+            box-shadow: 0 0 26px rgba(92, 240, 160, 0.45), 0 8px 25px rgba(0,0,0,0.5);
+            animation: fadeInAns 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .q-compare-arrow {
+            font-size: 4.5rem;
+            font-weight: 900;
+            line-height: 1;
+            color: #ffd84d;
+            text-shadow: 0 0 24px rgba(255, 216, 77, 0.9), 0 4px 10px rgba(0,0,0,0.85);
+            flex-shrink: 0;
+            user-select: none;
+            animation: pulseArrow 1.4s infinite;
+        }
+
         .q-image {
             width: 100%;
             height: 100%;
@@ -410,6 +478,7 @@ window.V1C = (function () {
         @keyframes fadeInAns { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
         @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
         @keyframes pulseBtn { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        @keyframes pulseArrow { 0%, 100% { transform: translateX(0) scale(1); } 50% { transform: translateX(6px) scale(1.08); } }
         @keyframes popTimer { 0% { opacity: 0; transform: scale(0.75) translateY(15px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
     </style>
 </head>
@@ -539,6 +608,28 @@ window.V1C = (function () {
             return "../../img/vong1_chung/" + imgName;
         }
 
+        // ================= XỬ LÝ LINK ẢNH ĐÁP ÁN =================
+        function resolveAnswerImageUrl(qObj) {
+            if (!qObj) return null;
+            const raw = qObj.urldapan || qObj.url_dapan || qObj.anhDapan || qObj.anh_dapan || qObj.image_dapan || "";
+            if (typeof raw !== "string") return null;
+
+            const imgName = raw.trim();
+            if (imgName === "" || imgName.toUpperCase() === "NULL" || imgName === "undefined") return null;
+
+            const driveMatch = imgName.match(/[-\w]{25,}/);
+            if (imgName.includes("drive.google.com") && driveMatch) {
+                return "https://drive.google.com/thumbnail?id=" + driveMatch[0] + "&sz=w1200";
+            }
+            if (!imgName.includes(".") && !imgName.includes("/") && imgName.length >= 25) {
+                return "https://drive.google.com/thumbnail?id=" + imgName + "&sz=w1200";
+            }
+            if (imgName.startsWith("http://") || imgName.startsWith("https://")) {
+                return imgName;
+            }
+            return "../../img/vong1_chung/" + imgName;
+        }
+
         // ================= TỰ ĐỘNG ĐỌC CẤU TRÚC FIREBASE =================
         function parseRoundData(data) {
             const raw = data || {};
@@ -570,6 +661,10 @@ window.V1C = (function () {
             if (q && q.sttcau != null && String(q.sttcau).trim() !== '') return String(q.sttcau).trim();
             if (q && q.id != null && String(q.id).trim() !== '') return String(q.id).trim();
             return String(fbKey);
+        }
+
+        function buildImgTag(link) {
+            return `<img class="q-image" src="${esc(link)}" onerror="this.outerHTML='<div class=\\'img-error-box\\'>⚠️ Không tải được ảnh!<br><small style=\\'color:#fff;\\'>Đường dẫn: ${esc(link)}</small></div>'">`;
         }
 
         // LẮNG NGHE TÍN HIỆU TỪ ADMIN (Polling mỗi 0.5 giây)
@@ -616,10 +711,12 @@ window.V1C = (function () {
                         const [fbKey, q] = found;
                         const stt = getQuestionStt(fbKey, q);
                         const statusAns = (Number(q.statusdapan) === 1 || q.statusdapan === true) ? 1 : 0;
-                        const qText = q.cauhoi || q.noiDung || "";
-                        const ansText = q.danan || q.dapan || q.dapAn || "Đang tải dữ liệu đáp án...";
+                        const qText = String(q.cauhoi ?? q.noiDung ?? "").trim();
+                        const rawAns = q.danan ?? q.dapan ?? q.dapAn ?? "";
+                        const ansText = String(rawAns).trim();
                         const imgLink = resolveImageUrl(q) || "";
-                        const renderKey = `${stt}|${statusAns}|${qText}|${ansText}|${imgLink}`;
+                        const ansImgLink = resolveAnswerImageUrl(q) || "";
+                        const renderKey = `${stt}|${statusAns}|${qText}|${ansText}|${imgLink}|${ansImgLink}`;
 
                         if (statusAns === 1) {
                             hideTimerBox();
@@ -630,20 +727,51 @@ window.V1C = (function () {
                             lastRenderKey = renderKey;
                             let html = `<div class="subject-tag">CÂU HỎI SỐ ${esc(stt)}</div>`;
 
-                            if (imgLink) {
+                            if (statusAns === 1 && imgLink && ansImgLink) {
+                                // Khi mở đáp án và có cả ảnh câu hỏi + ảnh đáp án:
+                                // Ảnh câu hỏi bên trái -> Dấu mũi tên -> Ảnh đáp án bên phải
+                                if (qText) {
+                                    html += `<div class="question-text-display" style="font-size: 2.3rem; margin-bottom: 14px;">${esc(qText)}</div>`;
+                                }
+                                const compactCls = (qText || ansText) ? " compact" : "";
                                 html += `
-                                    <div class="q-split-container">
-                                        <div class="q-left-panel">${esc(qText)}</div>
-                                        <div class="q-right-panel">
-                                            <img class="q-image" src="${esc(imgLink)}" onerror="this.outerHTML='<div class=\\'img-error-box\\'>⚠️ Không tải được ảnh!<br><small style=\\'color:#fff;\\'>Đường dẫn: ${esc(imgLink)}</small></div>'">
+                                    <div class="q-compare-container">
+                                        <div class="q-compare-panel${compactCls}">
+                                            ${buildImgTag(imgLink)}
+                                        </div>
+                                        <div class="q-compare-arrow">➔</div>
+                                        <div class="q-compare-panel answer-side${compactCls}">
+                                            ${buildImgTag(ansImgLink)}
                                         </div>
                                     </div>
                                 `;
                             } else {
-                                html += `<div class="question-text-display">${esc(qText)}</div>`;
+                                const singleImgLink = (statusAns === 1 && ansImgLink) ? ansImgLink : imgLink;
+                                if (singleImgLink && qText) {
+                                    // Có cả chữ câu hỏi và ảnh -> chia 2 cột trái - phải
+                                    html += `
+                                        <div class="q-split-container">
+                                            <div class="q-left-panel">${esc(qText)}</div>
+                                            <div class="q-right-panel">
+                                                ${buildImgTag(singleImgLink)}
+                                            </div>
+                                        </div>
+                                    `;
+                                } else if (singleImgLink && !qText) {
+                                    // Không có chữ câu hỏi -> ảnh nằm chính giữa
+                                    html += `
+                                        <div class="q-center-image-container">
+                                            <div class="q-center-panel">
+                                                ${buildImgTag(singleImgLink)}
+                                            </div>
+                                        </div>
+                                    `;
+                                } else if (qText) {
+                                    html += `<div class="question-text-display">${esc(qText)}</div>`;
+                                }
                             }
 
-                            if (statusAns === 1) {
+                            if (statusAns === 1 && ansText) {
                                 html += `<div class="ans-opened-box">ĐÁP ÁN: <span class="answer-content">${esc(ansText)}</span></div>`;
                             }
                             qBox.innerHTML = html;
