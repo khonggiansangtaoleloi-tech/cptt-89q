@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olympia Admin - Vòng 1 Chung</title>
+    <title>Olympia Admin - Trò Chơi Khán Giả</title>
     <script>
 /* =====================================================================
    V1C Core - Chỉ đọc api_url từ ../../api/vong1_chung.json
@@ -178,16 +178,142 @@ window.V1C = (function () {
         .btn-dapan.opened { background: #28a745; box-shadow: 0 0 10px rgba(40,167,69,0.4); }
 
         #status-text { text-align: center; color: #666; font-style: italic; margin-top: 10px; font-weight: 600; }
+
+        /* ================= POPUP MODAL ADMIN ================= */
+        .admin-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 22, 40, 0.62);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+            box-sizing: border-box;
+            animation: fadeOverlay 0.2s ease;
+        }
+        .admin-modal-overlay.show {
+            display: flex;
+        }
+        .admin-modal-box {
+            background: #ffffff;
+            width: 100%;
+            max-width: 460px;
+            border-radius: 14px;
+            box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+            overflow: hidden;
+            border-top: 6px solid #003366;
+            animation: popModal 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .admin-modal-box.danger {
+            border-top-color: #dc3545;
+        }
+        .admin-modal-box.success {
+            border-top-color: #28a745;
+        }
+        .admin-modal-header {
+            padding: 20px 24px 8px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .admin-modal-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex-shrink: 0;
+            background: #e7f1ff;
+            color: #003366;
+        }
+        .admin-modal-box.danger .admin-modal-icon {
+            background: #fdecea;
+            color: #dc3545;
+        }
+        .admin-modal-box.success .admin-modal-icon {
+            background: #eafaf1;
+            color: #28a745;
+        }
+        .admin-modal-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #003366;
+            margin: 0;
+        }
+        .admin-modal-box.danger .admin-modal-title {
+            color: #c82333;
+        }
+        .admin-modal-box.success .admin-modal-title {
+            color: #218838;
+        }
+        .admin-modal-body {
+            padding: 10px 24px 22px 24px;
+            font-size: 1.08rem;
+            line-height: 1.55;
+            color: #444;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+        .admin-modal-footer {
+            background: #f8f9fa;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            border-top: 1px solid #eee;
+        }
+        .admin-modal-btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.02rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .admin-modal-btn.cancel {
+            background: #e2e6ea;
+            color: #333;
+        }
+        .admin-modal-btn.cancel:hover {
+            background: #d3d9df;
+        }
+        .admin-modal-btn.primary {
+            background: #003366;
+            color: #ffffff;
+        }
+        .admin-modal-btn.primary:hover {
+            background: #002244;
+        }
+        .admin-modal-btn.danger {
+            background: #dc3545;
+            color: #ffffff;
+        }
+        .admin-modal-btn.danger:hover {
+            background: #c82333;
+        }
+        .admin-modal-btn.success {
+            background: #28a745;
+            color: #ffffff;
+        }
+        .admin-modal-btn.success:hover {
+            background: #218838;
+        }
+
+        @keyframes fadeOverlay { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes popModal { from { opacity: 0; transform: scale(0.88) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
     </style>
 </head>
 <body>
     <div class="dashboard">
         <div class="header-panel">
-            <a href="../vong2/" class="btn-link">MẶC ĐỊNH VÒNG 1</a>
-            <h1>BẢNG ĐIỀU KHIỂN MC - VÒNG 1 CHUNG</h1>
+            <h1>BẢNG ĐIỀU KHIỂN MC - TRÒ CHƠI KHÁN GIẢ</h1>
             <div>
                 <button class="btn-reset" onclick="resetRound()">Làm mới Vòng Chơi</button>
-                <a href="../vong2/" class="btn-link" style="margin-left: 10px;">CHUYỂN VÒNG 2 ▶</a>
             </div>
         </div>
 
@@ -207,6 +333,21 @@ window.V1C = (function () {
         <div id="status-text">Đang kết nối Firebase...</div>
     </div>
 
+    <!-- POPUP MODAL ADMIN -->
+    <div id="admin-popup-overlay" class="admin-modal-overlay" onclick="handlePopupBackdrop(event)">
+        <div id="admin-popup-box" class="admin-modal-box">
+            <div class="admin-modal-header">
+                <div id="admin-popup-icon" class="admin-modal-icon">ℹ️</div>
+                <h3 id="admin-popup-title" class="admin-modal-title">Thông báo</h3>
+            </div>
+            <div id="admin-popup-body" class="admin-modal-body"></div>
+            <div class="admin-modal-footer">
+                <button id="admin-popup-cancel" class="admin-modal-btn cancel" onclick="closeAdminPopup(false)">Hủy</button>
+                <button id="admin-popup-confirm" class="admin-modal-btn primary" onclick="closeAdminPopup(true)">Đồng ý</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Hỗ trợ cả cấu trúc FirebaseMyAdmin (question_bank + match_state) lẫn cấu trúc cũ (danhSachCauHoi + root)
         const esc = V1C.esc;
@@ -218,6 +359,66 @@ window.V1C = (function () {
         let stateSubPath = "match_state";
         let stateBusy = false;
         let adminTimerEnd = null;
+        let popupResolver = null;
+
+        // ================= HỆ THỐNG POPUP ADMIN =================
+        function showAdminPopup(options) {
+            const opts = options || {};
+            const overlay = document.getElementById('admin-popup-overlay');
+            const box = document.getElementById('admin-popup-box');
+            const iconEl = document.getElementById('admin-popup-icon');
+            const titleEl = document.getElementById('admin-popup-title');
+            const bodyEl = document.getElementById('admin-popup-body');
+            const cancelBtn = document.getElementById('admin-popup-cancel');
+            const confirmBtn = document.getElementById('admin-popup-confirm');
+
+            const mode = opts.mode || 'alert'; // 'alert' | 'confirm'
+            const tone = opts.tone || 'info';  // 'info' | 'danger' | 'success'
+
+            box.className = 'admin-modal-box' + (tone !== 'info' ? ' ' + tone : '');
+            iconEl.textContent = opts.icon || (tone === 'danger' ? '⚠️' : (tone === 'success' ? '✔' : 'ℹ️'));
+            titleEl.textContent = opts.title || 'Thông báo';
+            bodyEl.textContent = opts.message || '';
+
+            if (mode === 'confirm') {
+                cancelBtn.style.display = 'inline-block';
+                cancelBtn.textContent = opts.cancelText || 'Hủy bỏ';
+            } else {
+                cancelBtn.style.display = 'none';
+            }
+
+            confirmBtn.className = 'admin-modal-btn ' + (tone === 'danger' ? 'danger' : (tone === 'success' ? 'success' : 'primary'));
+            confirmBtn.textContent = opts.confirmText || (mode === 'confirm' ? 'Xác nhận' : 'Đóng');
+
+            overlay.classList.add('show');
+            setTimeout(() => confirmBtn.focus(), 20);
+
+            return new Promise((resolve) => {
+                popupResolver = resolve;
+            });
+        }
+
+        function closeAdminPopup(result) {
+            const overlay = document.getElementById('admin-popup-overlay');
+            overlay.classList.remove('show');
+            if (popupResolver) {
+                const fn = popupResolver;
+                popupResolver = null;
+                fn(Boolean(result));
+            }
+        }
+
+        function handlePopupBackdrop(e) {
+            if (e.target && e.target.id === 'admin-popup-overlay') {
+                closeAdminPopup(false);
+            }
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && popupResolver) {
+                closeAdminPopup(false);
+            }
+        });
 
         function setHTML(el, html) {
             if (!el || el._lastHtml === html) return;
@@ -341,7 +542,7 @@ window.V1C = (function () {
 
             if (!entries.length) {
                 setHTML(navBox, '');
-                setHTML(qList, '<div style="text-align:center; padding: 20px; color: #666; font-style: italic;">Chưa có câu hỏi nào trên Firebase (vong1_chung).</div>');
+                setHTML(qList, '<div style="text-align:center; padding: 20px; color: #666; font-style: italic;">Chưa có câu hỏi nào trên Firebase (Trò chơi khán giả).</div>');
                 return;
             }
 
@@ -464,7 +665,11 @@ window.V1C = (function () {
                 adminTimerEnd = Date.now() + 5000;
                 updateAdminTimerBtn();
             } catch (e) {
-                alert("Lỗi bắt đầu đếm 5s: " + e.message);
+                await showAdminPopup({
+                    title: "Lỗi đồng hồ 5s",
+                    message: "Lỗi bắt đầu đếm 5s: " + e.message,
+                    tone: "danger"
+                });
             } finally {
                 stateBusy = false;
             }
@@ -488,7 +693,11 @@ window.V1C = (function () {
                 });
                 await pollOnce();
             } catch (e) {
-                alert("Lỗi phát câu hỏi: " + e.message);
+                await showAdminPopup({
+                    title: "Lỗi phát câu hỏi",
+                    message: "Lỗi phát câu hỏi: " + e.message,
+                    tone: "danger"
+                });
             } finally {
                 stateBusy = false;
             }
@@ -508,7 +717,11 @@ window.V1C = (function () {
                 serverActiveQuestion = '';
                 await pollOnce();
             } catch (e) {
-                alert("Lỗi đóng câu hỏi: " + e.message);
+                await showAdminPopup({
+                    title: "Lỗi đóng câu hỏi",
+                    message: "Lỗi đóng câu hỏi: " + e.message,
+                    tone: "danger"
+                });
             } finally {
                 stateBusy = false;
             }
@@ -530,7 +743,11 @@ window.V1C = (function () {
                 }
                 await pollOnce();
             } catch (e) {
-                alert("Lỗi cập nhật trạng thái đáp án: " + e.message);
+                await showAdminPopup({
+                    title: "Lỗi cập nhật đáp án",
+                    message: "Lỗi cập nhật trạng thái đáp án: " + e.message,
+                    tone: "danger"
+                });
             } finally {
                 stateBusy = false;
             }
@@ -538,7 +755,16 @@ window.V1C = (function () {
 
         async function resetRound() {
             if (stateBusy) return;
-            if (!confirm("Làm mới Vòng 1.1 sẽ XÓA TRẠNG THÁI các câu đã phát (cauhoiopen) và đóng toàn bộ đáp án. Bạn có chắc chắn?")) return;
+            const confirmed = await showAdminPopup({
+                mode: "confirm",
+                tone: "danger",
+                title: "Làm mới Trò Chơi Khán Giả",
+                message: "Làm mới Trò Chơi Khán Giả sẽ XÓA TRẠNG THÁI các câu đã phát (cauhoiopen) và đóng toàn bộ đáp án.\n\nBạn có chắc chắn muốn thực hiện?",
+                confirmText: "Xác nhận làm mới",
+                cancelText: "Hủy bỏ"
+            });
+            if (!confirmed) return;
+
             stateBusy = true;
             adminTimerEnd = null;
             try {
@@ -558,8 +784,18 @@ window.V1C = (function () {
                 await V1C.patch("", updates);
                 currentSelectedQuestion = null;
                 await pollOnce();
+                await showAdminPopup({
+                    tone: "success",
+                    title: "Đã làm mới thành công",
+                    message: "Toàn bộ trạng thái câu hỏi đã phát và đáp án của Trò Chơi Khán Giả đã được đặt lại về ban đầu.",
+                    confirmText: "Hoàn tất"
+                });
             } catch (e) {
-                alert("Lỗi làm mới vòng chơi: " + e.message);
+                await showAdminPopup({
+                    title: "Lỗi làm mới vòng chơi",
+                    message: "Lỗi làm mới vòng chơi: " + e.message,
+                    tone: "danger"
+                });
             } finally {
                 stateBusy = false;
             }
