@@ -273,6 +273,7 @@
         let ms = {}, bank = {}, teams = [];
         let isAnimating = false, hasFiredConfetti = false, currentRandomizingTarget = "";
         let timerOn = false, timerEnd = 0;
+        let timerStartedForPkg = false;
         const usedPkgs = () => listOf(ms.goidadung).map(e => String(e[1]).toUpperCase());
 
         function setHtml(el, html) { if (el._last !== html) { el.innerHTML = html; el._last = html; scheduleFit(); } }
@@ -370,11 +371,13 @@
                 currentRandomizingTarget = ""; hasFiredConfetti = false;
                 setHtml(main, `<div class="status-waiting">Đang chờ Ban Giám Khảo chọn đội thi...</div>`);
                 timerOn = false; timerBox.style.display = 'none';
+                timerStartedForPkg = false;
                 return;
             }
 
             // ================= CHUẨN BỊ + RANDOM GÓI =================
             if (activeQId === "PREPARE" || activeQId === "RANDOM") {
+                timerStartedForPkg = false;
                 if (activeQId === "PREPARE") { hasFiredConfetti = false; currentRandomizingTarget = ""; Welcome.stop(); }
                 const used = usedPkgs();
                 const allPkgs = Object.keys(bank);
@@ -414,12 +417,21 @@
             const graded = typeof sub === "string" && sub.includes("MC Chấm");
             const teamQuestions = bank[pkgKey] || [];
 
-            // ================= ĐỒNG HỒ ĐẾM NGƯỢC =================
+            // ================= ĐỒNG HỒ ĐẾM NGƯỢC (CHỈ CHẠY 1 LẦN CHO CẢ GÓI) =================
             const isQuestion = activeQId !== "" && activeQId !== "KET_THUC";
             if (isQuestion && Number(ms.thoigian) > 0 && !graded) {
-                timerEnd = Number(ms.thoigian) + 60000;
+                // Nếu đồng hồ CHƯA bắt đầu cho gói này (tức là đang ở câu đầu tiên)
+                if (!timerStartedForPkg) {
+                    timerEnd = Number(ms.thoigian) + 60000;
+                    timerStartedForPkg = true; // Đánh dấu đã bắt đầu chạy
+                }
                 timerOn = true; timerBox.style.display = 'block';
-            } else { timerOn = false; timerBox.style.display = 'none'; }
+            } else { 
+                timerOn = false; 
+                timerBox.style.display = 'none'; 
+                // Nếu là trạng thái tổng kết (graded) hoặc kết thúc (KET_THUC), 
+                // không cần reset timerStartedForPkg, nó sẽ được reset khi qua gói mới (PREPARE/RESET_PKG)
+            }
 
             let cardHtml = `
                 <div class="focus-card">
