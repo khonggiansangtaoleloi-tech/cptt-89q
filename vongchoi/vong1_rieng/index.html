@@ -276,14 +276,17 @@
             }
 
             // ĐANG THI
-            if (turn && !SPECIAL.includes(id)) {
+                        if (turn && !SPECIAL.includes(id)) {
                 const idx = questions.findIndex(q => q.id == id);
                 const key = id + ":" + ms.thoigian;
                 if (idx !== -1 && curKey !== key) {
                     curKey = key; currentServerQId = id; frozenTime = null;
-                    const st = Number(ms.thoigian);
-                    endServer = st > 0 ? st + 60000 : nowS() + 60000;
                     running = true;
+                    // CHỈ TÍNH endServer NẾU CHƯA CÓ (tức là câu hỏi đầu tiên của gói)
+                    if (endServer === null) {
+                        const st = Number(ms.thoigian);
+                        endServer = st > 0 ? st + 60000 : nowS() + 60000;
+                    }
                     renderCurrentQ(idx);
                 } else if (idx !== -1 && window.globalShowAnswer) {
                     renderCurrentQ(idx);                            // MC mở đáp án -> hiện đáp án
