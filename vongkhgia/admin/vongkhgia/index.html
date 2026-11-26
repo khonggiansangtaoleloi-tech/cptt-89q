@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Olympia Admin - Vòng Chơi Khán Giả</title>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Olympia Admin - Vòng 1 Chung</title>
     <script>
 /* =====================================================================
    V1C Core - Chỉ đọc api_url từ ../../api/vong1_chung.json
@@ -102,6 +101,21 @@ window.V1C = (function () {
         .btn-reset { background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 1.1rem; }
         .btn-reset:hover { background: #c82333; }
 
+        .btn-link {
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 1.1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-link:hover { background: #218838; }
+
         /* KHUNG NGÂN HÀNG CÂU HỎI */
         .questions-panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .q-header { border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -120,6 +134,13 @@ window.V1C = (function () {
         .q-title { font-size: 1.4rem; font-weight: bold; color: #003366; }
         .q-content { font-size: 1.25rem; line-height: 1.6; color: #333; white-space: pre-wrap; overflow-wrap: anywhere; }
         .q-answer-admin { font-size: 1.2rem; color: #28a745; font-weight: bold; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px; }
+
+        .q-media-admin { margin-top: 10px; padding: 12px; background: #ffffff; border: 1px solid #cfe2ff; border-radius: 8px; }
+        .q-media-admin.answer-media { border-color: #badbcc; background: #f3fcf6; }
+        .q-media-label { font-size: 0.98rem; font-weight: 700; color: #003366; margin-bottom: 8px; }
+        .q-media-hint { font-size: 0.95rem; font-weight: 600; color: #6c757d; margin-top: 6px; font-style: italic; }
+        .q-admin-img { max-width: 100%; max-height: 280px; border-radius: 8px; border: 1px solid #dee2e6; display: block; object-fit: contain; background: #fff; }
+        .img-error-admin { color: #dc3545; font-size: 0.95rem; font-weight: 600; padding: 8px; background: #fff5f5; border: 1px dashed #dc3545; border-radius: 6px; }
 
         .q-actions { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
         .btn-timer-5s {
@@ -162,9 +183,11 @@ window.V1C = (function () {
 <body>
     <div class="dashboard">
         <div class="header-panel">
-            <h1>BẢNG ĐIỀU KHIỂN MC - VÒNG CHƠI KHÁN GIẢ</h1>
+            <a href="../vong2/" class="btn-link">MẶC ĐỊNH VÒNG 1</a>
+            <h1>BẢNG ĐIỀU KHIỂN MC - VÒNG 1 CHUNG</h1>
             <div>
                 <button class="btn-reset" onclick="resetRound()">Làm mới Vòng Chơi</button>
+                <a href="../vong2/" class="btn-link" style="margin-left: 10px;">CHUYỂN VÒNG 2 ▶</a>
             </div>
         </div>
 
@@ -196,29 +219,54 @@ window.V1C = (function () {
         let stateBusy = false;
         let adminTimerEnd = null;
 
-        // Popup thông báo hiện đại (SweetAlert2)
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 2500,
-            timerProgressBar: true
-        });
-
-        function showErrorPopup(title, message) {
-            Swal.fire({
-                icon: 'error',
-                title: title,
-                text: message || 'Đã xảy ra lỗi không xác định.',
-                confirmButtonText: 'Đóng',
-                confirmButtonColor: '#dc3545'
-            });
-        }
-
         function setHTML(el, html) {
             if (!el || el._lastHtml === html) return;
             el.innerHTML = html;
             el._lastHtml = html;
+        }
+
+        // Xử lý link ảnh câu hỏi
+        function resolveImageUrl(qObj) {
+            if (!qObj) return null;
+            const raw = qObj.url || qObj.anh || qObj.linkAnh || qObj.hinhanh || qObj.hinh_anh || qObj.image || qObj.img || qObj.url_anh || "";
+            if (typeof raw !== "string") return null;
+
+            const imgName = raw.trim();
+            if (imgName === "" || imgName.toUpperCase() === "NULL" || imgName === "undefined") return null;
+
+            const driveMatch = imgName.match(/[-\w]{25,}/);
+            if (imgName.includes("drive.google.com") && driveMatch) {
+                return "https://drive.google.com/thumbnail?id=" + driveMatch[0] + "&sz=w1200";
+            }
+            if (!imgName.includes(".") && !imgName.includes("/") && imgName.length >= 25) {
+                return "https://drive.google.com/thumbnail?id=" + imgName + "&sz=w1200";
+            }
+            if (imgName.startsWith("http://") || imgName.startsWith("https://")) {
+                return imgName;
+            }
+            return "../../img/vong1_chung/" + imgName;
+        }
+
+        // Xử lý link ảnh đáp án (urldapan)
+        function resolveAnswerImageUrl(qObj) {
+            if (!qObj) return null;
+            const raw = qObj.urldapan || qObj.url_dapan || qObj.anhDapan || qObj.anh_dapan || qObj.image_dapan || "";
+            if (typeof raw !== "string") return null;
+
+            const imgName = raw.trim();
+            if (imgName === "" || imgName.toUpperCase() === "NULL" || imgName === "undefined") return null;
+
+            const driveMatch = imgName.match(/[-\w]{25,}/);
+            if (imgName.includes("drive.google.com") && driveMatch) {
+                return "https://drive.google.com/thumbnail?id=" + driveMatch[0] + "&sz=w1200";
+            }
+            if (!imgName.includes(".") && !imgName.includes("/") && imgName.length >= 25) {
+                return "https://drive.google.com/thumbnail?id=" + imgName + "&sz=w1200";
+            }
+            if (imgName.startsWith("http://") || imgName.startsWith("https://")) {
+                return imgName;
+            }
+            return "../../img/vong1_chung/" + imgName;
         }
 
         // Tự động nhận diện nhánh câu hỏi và nhánh trạng thái trên Firebase
@@ -293,7 +341,7 @@ window.V1C = (function () {
 
             if (!entries.length) {
                 setHTML(navBox, '');
-                setHTML(qList, '<div style="text-align:center; padding: 20px; color: #666; font-style: italic;">Chưa có câu hỏi nào trên Firebase.</div>');
+                setHTML(qList, '<div style="text-align:center; padding: 20px; color: #666; font-style: italic;">Chưa có câu hỏi nào trên Firebase (vong1_chung).</div>');
                 return;
             }
 
@@ -317,12 +365,42 @@ window.V1C = (function () {
                     const btnDapAnText = dapanOpened ? "✔ Đã Mở Đáp Án Lên Màn Hình" : "Mở Đáp Án Lên Màn Hình";
                     const qText = q.cauhoi || q.noiDung || "(Nội dung trống)";
                     const dapAnThucTe = q.danan || q.dapan || q.dapAn || "Chưa có dữ liệu";
+                    const qImgLink = resolveImageUrl(q) || "";
+                    const ansImgLink = resolveAnswerImageUrl(q) || "";
+
+                    let qMediaHtml = "";
+                    if (qImgLink) {
+                        qMediaHtml = `
+                            <div class="q-media-admin">
+                                <div class="q-media-label">🖼️ Ảnh câu hỏi:</div>
+                                <img class="q-admin-img" src="${esc(qImgLink)}" onerror="this.outerHTML='<div class=\\'img-error-admin\\'>⚠️ Không tải được ảnh câu hỏi: ${esc(qImgLink)}</div>'">
+                            </div>
+                        `;
+                    }
+
+                    let ansMediaHtml = "";
+                    if (ansImgLink) {
+                        if (dapanOpened) {
+                            ansMediaHtml = `
+                                <div class="q-media-admin answer-media">
+                                    <div class="q-media-label" style="color:#28a745;">🖼️ Ảnh đáp án (Đang hiển thị lên màn hình):</div>
+                                    <img class="q-admin-img" src="${esc(ansImgLink)}" onerror="this.outerHTML='<div class=\\'img-error-admin\\'>⚠️ Không tải được ảnh đáp án: ${esc(ansImgLink)}</div>'">
+                                </div>
+                            `;
+                        } else {
+                            ansMediaHtml = `<div class="q-media-hint">🖼️ Câu này có đính kèm ảnh đáp án (sẽ hiển thị khi ấn "Mở Đáp Án Lên Màn Hình")</div>`;
+                        }
+                    }
 
                     activeItemHtml = `
                         <div class="q-item active">
                             <div class="q-title">Nội dung Câu hỏi ${esc(stt)}</div>
                             <div class="q-content">${esc(qText)}</div>
-                            <div class="q-answer-admin">💡 Gợi ý đáp án (Dành cho Admin): ${esc(dapAnThucTe)}</div>
+                            ${qMediaHtml}
+                            <div class="q-answer-admin">
+                                💡 Gợi ý đáp án (Dành cho Admin): ${esc(dapAnThucTe)}
+                                ${ansMediaHtml}
+                            </div>
                             <div class="q-actions">
                                 <button id="btn-timer-5s" class="btn-timer-5s" onclick="startTimer5s()">⏱ BẮT ĐẦU 5S</button>
                                 <button class="btn-dapan ${dapanOpened ? 'opened' : ''}" onclick="toggleAnswer('${esc(fbKey)}', ${dapanOpened ? 0 : 1})">
@@ -386,7 +464,7 @@ window.V1C = (function () {
                 adminTimerEnd = Date.now() + 5000;
                 updateAdminTimerBtn();
             } catch (e) {
-                showErrorPopup("Lỗi bắt đầu đếm 5s", e.message);
+                alert("Lỗi bắt đầu đếm 5s: " + e.message);
             } finally {
                 stateBusy = false;
             }
@@ -410,7 +488,7 @@ window.V1C = (function () {
                 });
                 await pollOnce();
             } catch (e) {
-                showErrorPopup("Lỗi phát câu hỏi", e.message);
+                alert("Lỗi phát câu hỏi: " + e.message);
             } finally {
                 stateBusy = false;
             }
@@ -429,9 +507,8 @@ window.V1C = (function () {
                 currentSelectedQuestion = null;
                 serverActiveQuestion = '';
                 await pollOnce();
-                Toast.fire({ icon: 'info', title: 'Đã đóng câu hỏi & làm sạch màn hình' });
             } catch (e) {
-                showErrorPopup("Lỗi đóng câu hỏi", e.message);
+                alert("Lỗi đóng câu hỏi: " + e.message);
             } finally {
                 stateBusy = false;
             }
@@ -453,7 +530,7 @@ window.V1C = (function () {
                 }
                 await pollOnce();
             } catch (e) {
-                showErrorPopup("Lỗi cập nhật trạng thái đáp án", e.message);
+                alert("Lỗi cập nhật trạng thái đáp án: " + e.message);
             } finally {
                 stateBusy = false;
             }
@@ -461,20 +538,7 @@ window.V1C = (function () {
 
         async function resetRound() {
             if (stateBusy) return;
-            const confirmResult = await Swal.fire({
-                icon: 'warning',
-                title: 'Làm mới Vòng Chơi?',
-                text: 'Thao tác này sẽ xóa trạng thái các câu đã phát và đóng toàn bộ đáp án. Bạn có chắc chắn muốn tiếp tục?',
-                showCancelButton: true,
-                confirmButtonText: 'Đồng ý làm mới',
-                cancelButtonText: 'Hủy',
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                reverseButtons: true
-            });
-
-            if (!confirmResult.isConfirmed) return;
-
+            if (!confirm("Làm mới Vòng 1.1 sẽ XÓA TRẠNG THÁI các câu đã phát (cauhoiopen) và đóng toàn bộ đáp án. Bạn có chắc chắn?")) return;
             stateBusy = true;
             adminTimerEnd = null;
             try {
@@ -494,9 +558,8 @@ window.V1C = (function () {
                 await V1C.patch("", updates);
                 currentSelectedQuestion = null;
                 await pollOnce();
-                Toast.fire({ icon: 'success', title: 'Đã làm mới vòng chơi thành công!' });
             } catch (e) {
-                showErrorPopup("Lỗi làm mới vòng chơi", e.message);
+                alert("Lỗi làm mới vòng chơi: " + e.message);
             } finally {
                 stateBusy = false;
             }
