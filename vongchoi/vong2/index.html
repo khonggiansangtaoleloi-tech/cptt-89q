@@ -359,7 +359,7 @@
         }
 
         /* =========================================
-           6. BẢNG CÂU HỎI & ĐÁP ÁN
+           6. BẢNG CÂU HỎI & ĐÁP ÁN (CHỮ TO, TỰ CO GIÃN)
            ========================================= */
         .question-board {
             container-type: inline-size;
@@ -369,14 +369,14 @@
             background: linear-gradient(135deg, rgba(10, 91, 132, 0.8), rgba(2, 28, 50, 0.96));
             border: 2px solid var(--cyan);
             border-radius: var(--radius-lg);
-            padding: 16px 26px 20px;
+            padding: 14px 24px 16px;
             box-shadow: var(--glow-cyan), inset 0 0 20px rgba(117, 223, 255, 0.06);
             display: flex;
             flex-direction: column;
             justify-content: flex-start;
             align-items: stretch;
-            gap: 10px;
-            overflow-y: auto;
+            gap: 8px;
+            overflow: hidden;
         }
 
         .q-placeholder {
@@ -384,13 +384,29 @@
             text-align: center;
             color: var(--muted);
             font-style: italic;
-            font-size: clamp(1.35rem, 3.4cqi, 2.4rem);
+            font-size: clamp(1.5rem, 3.8cqi, 2.7rem);
+        }
+
+        .q-chars-preview {
+            margin: auto 0;
+            text-align: center;
+            color: var(--cyan);
+            font-size: clamp(2rem, 6cqi, 4.2rem);
+            font-weight: 900;
+            text-transform: uppercase;
+            text-shadow: var(--glow-cyan);
+            line-height: 1.25;
+        }
+
+        .q-chars-preview span {
+            color: var(--gold);
+            text-shadow: var(--glow-gold);
         }
 
         .q-subject {
             text-align: center;
             color: var(--gold);
-            font-size: clamp(1rem, 2.4cqi, 1.55rem);
+            font-size: clamp(1.1rem, 2.6cqi, 1.7rem);
             font-weight: 900;
             letter-spacing: 1px;
             text-transform: uppercase;
@@ -401,7 +417,7 @@
         .q-direct-badge {
             align-self: center;
             display: inline-block;
-            padding: 4px 14px;
+            padding: 3px 14px;
             border-radius: 20px;
             background: rgba(117, 223, 255, 0.16);
             border: 1.5px solid var(--cyan);
@@ -417,24 +433,26 @@
             width: 100%;
             margin: auto 0;
             color: var(--white);
-            font-size: clamp(1.55rem, 4cqi, 2.85rem);
-            line-height: 1.38;
-            font-weight: 700;
-            text-align: justify;
-            text-align-last: center;
+            font-size: clamp(1.9rem, 5.4cqi, 3.8rem);
+            line-height: 1.3;
+            font-weight: 800;
+            text-align: center;
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
 
         .q-answer-reveal {
             text-align: center;
-            margin-top: 8px;
-            padding-top: 12px;
+            margin-top: 6px;
+            padding-top: 10px;
             width: 100%;
             border-top: 2px dashed var(--success);
-            font-size: clamp(1.8rem, 4.5cqi, 3.4rem);
+            font-size: clamp(1.8rem, 4.8cqi, 3.6rem);
             font-weight: 900;
             color: var(--success-light);
             text-shadow: var(--glow-success);
             text-transform: uppercase;
+            line-height: 1.12;
             flex-shrink: 0;
         }
 
@@ -503,15 +521,16 @@
         }
 
         /* =========================================
-           8. BẢNG CHƯỚNG NGẠI VẬT
+           8. BẢNG CHƯỚNG NGẠI VẬT & TRUNG TÂM
            ========================================= */
-        .cnv-board {
+        .cnv-board,
+        .cnv-center-board {
             container-type: inline-size;
             background: linear-gradient(135deg, rgba(8, 83, 121, 0.5), rgba(0, 18, 34, 0.92));
             border: 2px dashed var(--cyan);
             border-radius: var(--radius-md);
-            padding: clamp(12px, 1.5vw, 20px) 16px;
-            font-size: clamp(1rem, 2.8cqi, 2.2rem);
+            padding: clamp(10px, 1.2vw, 16px) 16px;
+            font-size: clamp(1rem, 2.6cqi, 2rem);
             font-weight: 900;
             color: var(--white);
             text-transform: uppercase;
@@ -519,15 +538,27 @@
             box-shadow: var(--glow-cyan);
         }
 
+        .cnv-center-board {
+            background: linear-gradient(135deg, rgba(120, 82, 12, 0.38), rgba(0, 18, 34, 0.94));
+            border: 2px solid var(--gold);
+            box-shadow: var(--glow-gold);
+        }
+
         .cnv-highlight {
             color: var(--cyan);
-            font-size: clamp(1.25rem, 3.6cqi, 2.8rem);
+            font-size: clamp(1.2rem, 3.4cqi, 2.5rem);
             text-shadow: var(--glow-cyan);
+        }
+
+        .cnv-center-highlight {
+            color: var(--gold);
+            font-size: clamp(1.2rem, 3.4cqi, 2.5rem);
+            text-shadow: var(--glow-gold);
         }
 
         .cnv-revealed {
             color: var(--success-light);
-            font-size: clamp(1.3rem, 3.8cqi, 3rem);
+            font-size: clamp(1.25rem, 3.5cqi, 2.6rem);
             text-shadow: var(--glow-success);
         }
 
@@ -537,7 +568,7 @@
         .player-status-grid {
             display: grid;
             grid-template-columns: 0.85fr 1.15fr;
-            gap: clamp(10px, 1.2vw, 16px);
+            gap: clamp(8px, 1vw, 12px);
             flex: 1;
         }
 
@@ -546,12 +577,12 @@
             background: var(--card-bg);
             border: 2px solid rgba(117, 223, 255, 0.45);
             border-radius: var(--radius-md);
-            padding: clamp(12px, 1.4vw, 18px);
+            padding: clamp(10px, 1.1vw, 14px);
             text-align: center;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            gap: 10px;
+            gap: 6px;
             position: relative;
             overflow: hidden;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
@@ -584,7 +615,7 @@
 
         .team-label {
             color: var(--cyan);
-            font-size: clamp(0.8rem, 4.2cqi, 1.15rem);
+            font-size: clamp(0.75rem, 4cqi, 1.05rem);
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -592,11 +623,11 @@
 
         .team-name {
             color: var(--gold);
-            font-size: clamp(1.1rem, 7cqi, 2.2rem);
+            font-size: clamp(1rem, 6.5cqi, 2rem);
             font-weight: 900;
             text-transform: uppercase;
             text-shadow: var(--glow-gold);
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .team-score {
@@ -606,7 +637,7 @@
             justify-content: center;
             font-family: 'JetBrains Mono', monospace;
             font-variant-numeric: tabular-nums;
-            font-size: clamp(3rem, 20cqi, 5.2rem);
+            font-size: clamp(2.4rem, 17cqi, 4.4rem);
             color: var(--gold-light);
             font-weight: 800;
             margin: 0;
@@ -615,11 +646,11 @@
         }
 
         .team-answer-box {
-            padding: 8px 10px;
+            padding: 6px 8px;
             background: rgba(117, 223, 255, 0.08);
             border: 1.5px dashed rgba(117, 223, 255, 0.4);
             border-radius: 8px;
-            min-height: 44px;
+            min-height: 38px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -635,7 +666,7 @@
         .ans-display-text {
             color: var(--success-light);
             font-weight: 800;
-            font-size: clamp(0.9rem, 5cqi, 1.35rem);
+            font-size: clamp(0.85rem, 4.8cqi, 1.25rem);
             text-transform: uppercase;
             word-break: break-word;
         }
@@ -643,7 +674,7 @@
         .ans-display-time {
             font-family: 'JetBrains Mono', monospace;
             color: var(--gold);
-            font-size: clamp(0.75rem, 4cqi, 1rem);
+            font-size: clamp(0.72rem, 3.8cqi, 0.95rem);
             font-weight: 700;
         }
 
@@ -653,13 +684,13 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .player-ans-input {
             width: 100%;
-            padding: 12px 14px;
-            font-size: clamp(1rem, 4.8cqi, 1.5rem);
+            padding: 10px 12px;
+            font-size: clamp(0.95rem, 4.5cqi, 1.4rem);
             font-weight: 800;
             text-transform: uppercase;
             text-align: center;
@@ -684,8 +715,8 @@
 
         .btn-submit-ans {
             width: 100%;
-            padding: 12px 16px;
-            font-size: clamp(0.95rem, 4.5cqi, 1.35rem);
+            padding: 10px 14px;
+            font-size: clamp(0.9rem, 4.2cqi, 1.25rem);
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -712,10 +743,10 @@
         }
 
         .submit-feedback {
-            font-size: clamp(0.8rem, 3.8cqi, 1.05rem);
+            font-size: clamp(0.75rem, 3.6cqi, 1rem);
             font-weight: 700;
             color: var(--muted);
-            min-height: 20px;
+            min-height: 18px;
         }
 
         .submit-feedback.ok { color: var(--success-light); }
@@ -773,36 +804,38 @@
             }
 
             .right-panel {
-                padding: 14px 18px;
-                gap: 10px;
+                padding: 12px 16px;
+                gap: 8px;
             }
 
             .words-board {
-                gap: 7px;
+                gap: 6px;
                 padding: 2px 0;
                 flex-shrink: 0;
             }
 
             .circle, .row-label {
-                width: clamp(26px, 2.3vw, 36px);
-                height: clamp(26px, 2.3vw, 36px);
-                min-width: clamp(26px, 2.3vw, 36px);
-                font-size: clamp(0.85rem, 1.05vw, 1.1rem);
+                width: clamp(26px, 2.2vw, 34px);
+                height: clamp(26px, 2.2vw, 34px);
+                min-width: clamp(26px, 2.2vw, 34px);
+                font-size: clamp(0.85rem, 1vw, 1.05rem);
             }
 
-            .cnv-board {
-                padding: 10px 14px;
+            .cnv-board,
+            .cnv-center-board {
+                padding: 8px 12px;
                 flex-shrink: 0;
             }
 
             .player-status-grid {
                 flex: 1;
                 min-height: 0;
-                gap: 10px;
+                gap: 8px;
             }
 
             .team-card {
-                padding: 12px 14px;
+                padding: 8px 12px;
+                gap: 4px;
             }
         }
 
@@ -866,6 +899,7 @@
         <section class="right-panel">
             <div class="words-board" id="words-board"></div>
             <div class="cnv-board" id="cnv-board">ĐANG TẢI DỮ LIỆU...</div>
+            <div class="cnv-center-board" id="cnv-center-board">TRUNG TÂM: ĐANG TẢI...</div>
 
             <div class="player-status-grid">
                 <div class="team-card" id="my-team-card">
@@ -904,12 +938,43 @@
 
     <script>
         // ==========================================
+        // ĐỒNG BỘ GIỜ CHUẨN VỚI MÁY CHỦ FIREBASE
+        // ==========================================
+        let serverTimeOffset = 0;
+
+        function getServerNow() {
+            return Date.now() + serverTimeOffset;
+        }
+
+        async function syncServerClock(fbBaseUrl) {
+            if (!fbBaseUrl) return;
+            const clientId = "c_" + Math.random().toString(36).slice(2, 10);
+            const url = `${fbBaseUrl}/_clock_sync/${clientId}.json`;
+            try {
+                const t0 = Date.now();
+                const res = await fetch(url, {
+                    method: "PUT",
+                    body: JSON.stringify({ ".sv": "timestamp" })
+                });
+                const serverTs = await res.json();
+                const t1 = Date.now();
+                if (typeof serverTs === "number") {
+                    serverTimeOffset = serverTs - Math.round((t0 + t1) / 2);
+                }
+                fetch(url, { method: "DELETE" }).catch(() => {});
+            } catch (e) {
+                console.warn("Không thể đồng bộ giờ máy chủ:", e);
+            }
+        }
+
+        // ==========================================
         // 1. CẤU HÌNH API FIREBASE
         // ==========================================
         const API_VONG2_CFG = "../../api/vong2.json";
         let FB_VONG2 = "";   // .../vong2
         let FB_DIEMSO = "";  // .../diemso
         let lastSessionKeyV2 = "";
+        let lastQBoxHtml = "";
 
         let myFirebaseScore = null;
         let prevScore = null;
@@ -920,6 +985,9 @@
         let globalCauHoiV2 = {};
         let globalTrangThai = {};
         let globalMatchState = {};
+
+        let fbHienKyTuCauHoi = "";
+        let fbShowCharsOnly = false;
 
         let myMachineTeam = localStorage.getItem("olympia_team");
         let myTeamKey = localStorage.getItem("olympia_team_key") || "";
@@ -1038,6 +1106,7 @@
 
             myTeamName = myMachineTeam;
             updatePlayerCardUI();
+            await syncServerClock(FB_VONG2);
             await resolveMyTeam();
             fetchScoresLoop();
             fetchGameStateLoop();
@@ -1052,7 +1121,7 @@
             if (!curQ) return 0;
             if (timerPausedV2) return Math.max(0, timerRemainingV2);
             if (!endTimeTimestampV2) return 0;
-            return Math.max(0, endTimeTimestampV2 - Date.now());
+            return Math.max(0, endTimeTimestampV2 - getServerNow());
         }
 
         function hasSubmittedCurrentQuestion() {
@@ -1209,6 +1278,9 @@
                 globalTrangThai = state;
                 globalMatchState = db.match_state || {};
 
+                fbHienKyTuCauHoi = String(state.hienKyTuCauHoi || globalMatchState.hien_kytu || "");
+                fbShowCharsOnly = (state.showCharsOnly === true || state.showCharsOnly === "true");
+
                 let blurredArr = [];
                 if (state.blurredPieces !== undefined) {
                     blurredArr = state.blurredPieces
@@ -1265,7 +1337,7 @@
                         if (timerRemainingV2 > 0) isTimeUpV2 = false;
                     } else if (state.timerEndTime) {
                         endTimeTimestampV2 = Number(state.timerEndTime);
-                        if (endTimeTimestampV2 > Date.now()) isTimeUpV2 = false;
+                        if (endTimeTimestampV2 > getServerNow()) isTimeUpV2 = false;
                     }
                 }
 
@@ -1275,7 +1347,7 @@
             } catch (e) {
                 console.error("Lỗi đồng bộ trạng thái V2:", e);
             } finally {
-                setTimeout(fetchGameStateLoop, 1000);
+                setTimeout(fetchGameStateLoop, 500);
             }
         }
 
@@ -1317,7 +1389,9 @@
             }
 
             if (!curQ) {
-                fb.innerText = "Chờ câu hỏi từ MC...";
+                fb.innerText = (fbShowCharsOnly && fbHienKyTuCauHoi)
+                    ? "Đã hiện số ký tự — chờ MC phát câu hỏi..."
+                    : "Chờ câu hỏi từ MC...";
                 fb.className = "submit-feedback";
             } else if (isCenterQ) {
                 fb.innerText = "🎙 Câu Trung Tâm: Trả lời trực tiếp với MC!";
@@ -1447,7 +1521,28 @@
         }
 
         // ==========================================
-        // 7. RENDER BẢNG TỪ KHÓA, CNV & CÂU HỎI
+        // 7. TỰ ĐỘNG CÂN CHỈNH CỠ CHỮ Ô CÂU HỎI
+        // ==========================================
+        function fitQuestionText() {
+            const qBox = document.getElementById('q-box-v2');
+            if (!qBox) return;
+            const qText = qBox.querySelector('.q-text');
+            if (!qText) return;
+
+            qText.style.fontSize = "";
+            let currentSize = parseFloat(window.getComputedStyle(qText).fontSize);
+            const minSize = 20;
+
+            while (qBox.scrollHeight > qBox.clientHeight + 2 && currentSize > minSize) {
+                currentSize -= 2;
+                qText.style.fontSize = currentSize + "px";
+            }
+        }
+
+        window.addEventListener('resize', fitQuestionText);
+
+        // ==========================================
+        // 8. RENDER BẢNG TỪ KHÓA, CNV & CÂU HỎI
         // ==========================================
         function processGameState() {
             if (!myMachineTeam || !globalTrangThai || !globalCauHoiV2) return;
@@ -1460,6 +1555,7 @@
             const currentQ = globalTrangThai.cauHoiHienTai || "";
             const showAns = (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true")
                 || Boolean(globalMatchState.config && globalMatchState.config.show_dapan === true);
+            const shouldShowAns = showAns || isTimeUpV2;
             const blurredArr = window.fbBlurredArr || [];
 
             // 1. Bảng từ khóa hàng ngang 1-4
@@ -1474,7 +1570,7 @@
                 const answerStr = qData.dapAn ? qData.dapAn.toString().normalize('NFC').toUpperCase().replace(/\s/g, '') : "";
                 const charsCount = Number(qData.soKyTu) || answerStr.length || 0;
                 const isRevealed = (globalTrangThai['manh' + id] === true || globalTrangThai['manh' + id] === "true")
-                    || (showAns && String(currentQ) === id);
+                    || (shouldShowAns && String(currentQ) === id);
 
                 let circlesHtml = "";
                 for (let c = 0; c < charsCount; c++) {
@@ -1491,14 +1587,15 @@
             }
             wordsBoard.innerHTML = wordsHtml;
 
-            // 2. Bảng Chướng ngại vật
+            // 2. Bảng Chướng ngại vật & Trung Tâm
             const cnvBoard = document.getElementById('cnv-board');
+            const cnvCenterBoard = document.getElementById('cnv-center-board');
             const q5Data = globalCauHoiV2['5'];
-            const activeQ = globalCauHoiV2[String(currentQ)] || q5Data;
-            const isCenterDone = isCenterQuestion(currentQ) && showAns;
-            const hasSelectedQuestion = Boolean(currentQ && String(currentQ).trim() !== "");
+            const targetId = currentQ || (fbShowCharsOnly ? fbHienKyTuCauHoi : "");
+            const activeQ = targetId ? (globalCauHoiV2[String(targetId)] || q5Data) : null;
+            const isCenterDone = isCenterQuestion(currentQ) && shouldShowAns;
 
-            if (!hasSelectedQuestion && !isCenterDone) {
+            if (!targetId && !isCenterDone) {
                 cnvBoard.innerHTML = `<span style="color: var(--muted);">CHƯỚNG NGẠI VẬT: ĐANG CHỜ CHỌN CÂU HỎI...</span>`;
             } else if (activeQ && activeQ.dapAn) {
                 const activeAnsStr = activeQ.dapAn.toString().normalize('NFC').toUpperCase();
@@ -1514,47 +1611,82 @@
                 cnvBoard.innerHTML = `<span style="color: var(--muted);">CHƯA CÓ DỮ LIỆU CHƯỚNG NGẠI VẬT</span>`;
             }
 
+            // Dòng hiển thị ký tự Chướng ngại vật Trung Tâm (luôn hiển thị)
+            if (cnvCenterBoard) {
+                if (q5Data && (q5Data.soKyTu || q5Data.dapAn)) {
+                    const cnvAnsStr = q5Data.dapAn ? q5Data.dapAn.toString().normalize('NFC').toUpperCase() : "";
+                    const cnvCharCount = Number(q5Data.soKyTu) || cnvAnsStr.replace(/\s/g, '').length;
+
+                    if (isCenterDone && cnvAnsStr) {
+                        cnvCenterBoard.innerHTML = `<span style="color: var(--gold);">TRUNG TÂM:</span> <span class="cnv-revealed">${escapeHtml(cnvAnsStr)}</span>`;
+                    } else {
+                        cnvCenterBoard.innerHTML = `TRUNG TÂM GỒM: <span class="cnv-center-highlight">${cnvCharCount} KÝ TỰ</span>`;
+                    }
+                } else {
+                    cnvCenterBoard.innerHTML = `<span style="color: var(--muted);">TRUNG TÂM: CHƯA CÓ DỮ LIỆU</span>`;
+                }
+            }
+
             // 3. Bảng câu hỏi
             const qBox = document.getElementById('q-box-v2');
+            let newHtml = "";
+
             if (!currentQ) {
-                qBox.innerHTML = '<div class="q-placeholder">Đang chờ lựa chọn mảnh ghép...</div>';
-                return;
-            }
+                if (fbShowCharsOnly && fbHienKyTuCauHoi && globalCauHoiV2[fbHienKyTuCauHoi]) {
+                    const qPreview = globalCauHoiV2[fbHienKyTuCauHoi];
+                    const ansPreview = qPreview.dapAn ? qPreview.dapAn.toString().normalize('NFC') : "";
+                    const lenPreview = Number(qPreview.soKyTu) || ansPreview.replace(/\s/g, '').length || 0;
+                    const titlePreview = isCenterQuestion(fbHienKyTuCauHoi)
+                        ? "CÂU TRUNG TÂM"
+                        : `TỪ KHÓA HÀNG NGANG SỐ ${escapeHtml(fbHienKyTuCauHoi)}`;
 
-            const qData = globalCauHoiV2[currentQ];
-            if (!qData) {
-                qBox.innerHTML = '<div class="q-placeholder">Đang chờ lựa chọn mảnh ghép...</div>';
-                return;
-            }
-
-            const cur = String(currentQ);
-            const isCenterQ = isCenterQuestion(cur);
-            const isDead = blurredArr.includes(cur) ||
-                (isCenterQ && (blurredArr.includes("CNV") || blurredArr.includes("TRUNGTAM")));
-            const correctAns = qData.dapAn ? qData.dapAn.toString().normalize('NFC') : "";
-            const displayLen = Number(qData.soKyTu) || correctAns.replace(/\s/g, '').length || 0;
-
-            const ansHtml = (showAns && correctAns !== "")
-                ? `<div class="q-answer-reveal">ĐÁP ÁN: ${escapeHtml(correctAns)}</div>`
-                : "";
-
-            if (isDead) {
-                qBox.innerHTML = `
-                    <div class="q-subject">[ TỪ KHÓA SỐ ${escapeHtml(cur)} - ${displayLen} KÝ TỰ ]</div>
-                    <div class="q-text" style="color: var(--muted);">CÂU HỎI ĐÃ BỊ KHÓA</div>
-                    ${ansHtml}`;
-            } else if (isCenterQ) {
-                qBox.innerHTML = `
-                    <div class="q-subject">[ GỢI Ý CÂU TRUNG TÂM - ${displayLen} KÝ TỰ ]</div>
-                    <div class="q-direct-badge">🎙 TRẢ LỜI TRỰC TIẾP VỚI MC</div>
-                    <div class="q-text">${qData.noiDung}</div>
-                    ${ansHtml}`;
+                    newHtml = `
+                        <div class="q-subject">[ ${titlePreview} ]</div>
+                        <div class="q-chars-preview">GỒM <span>${lenPreview} KÝ TỰ</span></div>`;
+                } else {
+                    newHtml = '<div class="q-placeholder">Đang chờ lựa chọn mảnh ghép...</div>';
+                }
             } else {
-                qBox.innerHTML = `
-                    <div class="q-subject">[ TỪ KHÓA SỐ ${escapeHtml(cur)} - ${displayLen} KÝ TỰ ]</div>
-                    <div class="q-direct-badge">💻 TRẢ LỜI TRÊN MÁY TÍNH</div>
-                    <div class="q-text">${qData.noiDung}</div>
-                    ${ansHtml}`;
+                const qData = globalCauHoiV2[currentQ];
+                if (!qData) {
+                    newHtml = '<div class="q-placeholder">Đang chờ lựa chọn mảnh ghép...</div>';
+                } else {
+                    const cur = String(currentQ);
+                    const isCenterQ = isCenterQuestion(cur);
+                    const isDead = blurredArr.includes(cur) ||
+                        (isCenterQ && (blurredArr.includes("CNV") || blurredArr.includes("TRUNGTAM")));
+                    const correctAns = qData.dapAn ? qData.dapAn.toString().normalize('NFC') : "";
+                    const displayLen = Number(qData.soKyTu) || correctAns.replace(/\s/g, '').length || 0;
+
+                    const ansHtml = (shouldShowAns && correctAns !== "")
+                        ? `<div class="q-answer-reveal">ĐÁP ÁN: ${escapeHtml(correctAns)}</div>`
+                        : "";
+
+                    if (isDead) {
+                        newHtml = `
+                            <div class="q-subject">[ TỪ KHÓA SỐ ${escapeHtml(cur)} - ${displayLen} KÝ TỰ ]</div>
+                            <div class="q-text" style="color: var(--muted);">CÂU HỎI ĐÃ BỊ KHÓA</div>
+                            ${ansHtml}`;
+                    } else if (isCenterQ) {
+                        newHtml = `
+                            <div class="q-subject">[ GỢI Ý CÂU TRUNG TÂM - ${displayLen} KÝ TỰ ]</div>
+                            <div class="q-direct-badge">🎙 TRẢ LỜI TRỰC TIẾP VỚI MC</div>
+                            <div class="q-text">${qData.noiDung}</div>
+                            ${ansHtml}`;
+                    } else {
+                        newHtml = `
+                            <div class="q-subject">[ TỪ KHÓA SỐ ${escapeHtml(cur)} - ${displayLen} KÝ TỰ ]</div>
+                            <div class="q-direct-badge">💻 TRẢ LỜI TRÊN MÁY TÍNH</div>
+                            <div class="q-text">${qData.noiDung}</div>
+                            ${ansHtml}`;
+                    }
+                }
+            }
+
+            if (newHtml !== lastQBoxHtml) {
+                lastQBoxHtml = newHtml;
+                qBox.innerHTML = newHtml;
+                requestAnimationFrame(fitQuestionText);
             }
         }
     </script>
