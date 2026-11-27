@@ -243,25 +243,6 @@
         .ans-saved-val { font-size: 1.05rem; color: #0056b3; word-break: break-word; }
         .time-text { color: var(--success); font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
 
-        .direct-ans-row {
-            display: flex; gap: 6px; margin-top: 2px;
-        }
-        .direct-ans-input {
-            flex: 1; min-width: 0; padding: 7px 10px; font-size: 0.92rem; font-weight: 600;
-            border: 1.5px solid #cbd5e1; border-radius: 6px; outline: none; color: #1e293b;
-            background: #fff;
-        }
-        .direct-ans-input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(0,123,255,0.15);
-        }
-        .btn-save-ans {
-            background: var(--primary); color: #fff; border: none; border-radius: 6px;
-            padding: 7px 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer;
-            white-space: nowrap; transition: 0.2s;
-        }
-        .btn-save-ans:hover { background: var(--primary-hover); }
-
         .score-ctrl { display: flex; align-items: center; gap: 8px; }
         .btn-add, .btn-sub {
             flex: 1; height: 38px; display: flex; justify-content: center; align-items: center;
@@ -329,10 +310,14 @@
         .q-timer-badge.timeup { background: #cbd5e1; color: #64748b; }
 
         .q-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
-        .btn-show, .btn-pause, .btn-ans-q, .btn-blur, .btn-review {
+        .btn-chars, .btn-show, .btn-pause, .btn-blur, .btn-review {
             border: none; padding: 7px 11px; cursor: pointer; border-radius: 6px;
             font-weight: 600; font-size: 0.85rem; transition: 0.2s;
         }
+        .btn-chars { background: #6f42c1; color: #fff; }
+        .btn-chars:hover { background: #59339d; }
+        .btn-chars.active { background: #4c1d95; box-shadow: 0 0 0 2px #c4b5fd; }
+
         .btn-show { background: var(--primary-dark); color: #fff; }
         .btn-show:hover { background: #004c99; }
 
@@ -342,18 +327,13 @@
         .btn-pause.is-paused:hover:not(:disabled) { background: var(--success-hover); }
         .btn-pause:disabled { background: #cbd5e1; color: #64748b; cursor: not-allowed; opacity: 0.7; }
 
-        .btn-ans-q { background: var(--success); color: #fff; }
-        .btn-ans-q:hover { background: var(--success-hover); }
-
         .btn-blur { background: var(--secondary); color: #fff; }
         .btn-blur:hover { background: #5a6268; }
         .btn-review { background: var(--warning); color: #1e293b; }
         .btn-review:hover { background: var(--warning-hover); }
 
         .blurred { opacity: 0.45 !important; filter: grayscale(100%); pointer-events: none; }
-        .q-item.blurred .btn-blur,
-        .q-item.blurred .btn-ans-q { pointer-events: auto; }
-        .q-item.blurred .btn-blur { background: #343a40; }
+        .q-item.blurred .btn-blur { pointer-events: auto; background: #343a40; }
 
         /* ================= RESPONSIVE BREAKPOINTS ================= */
         @media (max-width: 1200px) {
@@ -454,34 +434,34 @@
 
     <script>
         // ==========================================
-// ĐỒNG BỘ GIỜ CHUẨN VỚI MÁY CHỦ FIREBASE
-// ==========================================
-let serverTimeOffset = 0;
+        // ĐỒNG BỘ GIỜ CHUẨN VỚI MÁY CHỦ FIREBASE
+        // ==========================================
+        let serverTimeOffset = 0;
 
-function getServerNow() {
-    return Date.now() + serverTimeOffset;
-}
-
-async function syncServerClock(fbBaseUrl) {
-    if (!fbBaseUrl) return;
-    const clientId = "c_" + Math.random().toString(36).slice(2, 10);
-    const url = `${fbBaseUrl}/_clock_sync/${clientId}.json`;
-    try {
-        const t0 = Date.now();
-        const res = await fetch(url, {
-            method: "PUT",
-            body: JSON.stringify({ ".sv": "timestamp" })
-        });
-        const serverTs = await res.json();
-        const t1 = Date.now();
-        if (typeof serverTs === "number") {
-            serverTimeOffset = serverTs - Math.round((t0 + t1) / 2);
+        function getServerNow() {
+            return Date.now() + serverTimeOffset;
         }
-        fetch(url, { method: "DELETE" }).catch(() => {});
-    } catch (e) {
-        console.warn("Không thể đồng bộ giờ máy chủ:", e);
-    }
-}
+
+        async function syncServerClock(fbBaseUrl) {
+            if (!fbBaseUrl) return;
+            const clientId = "c_" + Math.random().toString(36).slice(2, 10);
+            const url = `${fbBaseUrl}/_clock_sync/${clientId}.json`;
+            try {
+                const t0 = Date.now();
+                const res = await fetch(url, {
+                    method: "PUT",
+                    body: JSON.stringify({ ".sv": "timestamp" })
+                });
+                const serverTs = await res.json();
+                const t1 = Date.now();
+                if (typeof serverTs === "number") {
+                    serverTimeOffset = serverTs - Math.round((t0 + t1) / 2);
+                }
+                fetch(url, { method: "DELETE" }).catch(() => {});
+            } catch (e) {
+                console.warn("Không thể đồng bộ giờ máy chủ:", e);
+            }
+        }
 
         const API_VONG2_CFG = "../../api/vong2.json";
         let FB_VONG2 = "";   // .../vong2
@@ -501,6 +481,7 @@ async function syncServerClock(fbBaseUrl) {
         let isAdminSoundMuted = false;
         let lastPlayedTimerKey = "";
         let lastAnswerSoundKey = "";
+        let lastAutoRevealedKey = "";
 
         function toggleAdminSound() {
             isAdminSoundMuted = !isAdminSoundMuted;
@@ -667,17 +648,40 @@ async function syncServerClock(fbBaseUrl) {
         }
 
         function getRemainingMs() {
-        if (!globalTrangThai.cauHoiHienTai) return 0;
-        if (adminTimerPaused) return Math.max(0, adminTimerRemaining);
-        if (!adminTimerEnd) return 0;
-        return Math.max(0, adminTimerEnd - getServerNow());
-    }
+            if (!globalTrangThai.cauHoiHienTai) return 0;
+            if (adminTimerPaused) return Math.max(0, adminTimerRemaining);
+            if (!adminTimerEnd) return 0;
+            return Math.max(0, adminTimerEnd - getServerNow());
+        }
 
-        function formatElapsedTime() {
-            const remMs = getRemainingMs();
-            if (!globalTrangThai.cauHoiHienTai) return "0.00s";
-            const elapsedSec = Math.max(0, (30000 - remMs) / 1000);
-            return `${elapsedSec.toFixed(2)}s`;
+        // ==========================================
+        // TỰ ĐỘNG HIỆN ĐÁP ÁN KHI HẾT GIỜ (KHÔNG MỞ Ô HÌNH ẢNH)
+        // ==========================================
+        async function autoShowAnswerOnTimeUp(id) {
+            const strId = String(id);
+            try {
+                const triggerTs = Date.now();
+                globalTrangThai.showAnswer = true;
+                globalTrangThai.answerTrigger = triggerTs;
+
+                await Promise.all([
+                    fbPatchState({
+                        showAnswer: true,
+                        answerTrigger: triggerTs
+                    }),
+                    fbSend("PATCH", "/match_state/config", { show_dapan: true })
+                ]);
+
+                let btnShowAns = document.getElementById('btn-show-ans-v2');
+                if (btnShowAns) {
+                    btnShowAns.innerText = "🚫 ẨN ĐÁP ÁN KHÁN GIẢ";
+                    btnShowAns.style.background = "#6c757d";
+                }
+
+                checkAndTriggerAnswerSound();
+            } catch (e) {
+                console.error("Lỗi tự động hiện đáp án khi hết giờ:", e);
+            }
         }
 
         // ==========================================
@@ -687,6 +691,15 @@ async function syncServerClock(fbBaseUrl) {
             const curQ = String(globalTrangThai.cauHoiHienTai || "");
             const remMs = getRemainingMs();
             const qKeys = Object.keys(globalCauHoiV2);
+
+            // Tự động hiện đáp án khi hết giờ (không mở mảnh ghép)
+            if (curQ && !adminTimerPaused && adminTimerEnd && remMs <= 0 && !isCurrentAnswerRevealed()) {
+                const autoKey = `${curQ}_${adminTimerEnd}`;
+                if (lastAutoRevealedKey !== autoKey) {
+                    lastAutoRevealedKey = autoKey;
+                    autoShowAnswerOnTimeUp(curQ);
+                }
+            }
 
             if (!curQ || remMs <= 0 || isCurrentAnswerRevealed()) {
                 stopTimerSound();
@@ -906,9 +919,8 @@ async function syncServerClock(fbBaseUrl) {
         }
 
         // ==========================================
-        // LƯU ĐÁP ÁN TRỰC TIẾP TRÊN MÁY TÍNH
+        // XÓA ĐÁP ÁN HIỆN TẠI
         // ==========================================
-
         function buildEmptyDapanCacDoi() {
             const emptyObj = {};
             window.teamList.forEach(t => {
@@ -929,10 +941,6 @@ async function syncServerClock(fbBaseUrl) {
                 if (curQ) {
                     await fbSend("DELETE", `/submittedAnswers/${curQ}`);
                 }
-                window.teamList.forEach((_, idx) => {
-                    const inp = document.getElementById(`ans_input_${idx}`);
-                    if (inp) inp.value = "";
-                });
             } catch (e) {
                 console.error("Lỗi xóa đáp án:", e);
             }
@@ -958,7 +966,6 @@ async function syncServerClock(fbBaseUrl) {
                 let ans = "";
                 let displayTime = "⏱ --";
 
-                // Ưu tiên đọc từ match_state.dapan_cacdoi
                 if (dbCol && dapanCacDoi[dbCol] && dapanCacDoi[dbCol].dapan) {
                     ans = dapanCacDoi[dbCol].dapan;
                     const tNop = dapanCacDoi[dbCol].thoigian_nop;
@@ -1014,12 +1021,6 @@ async function syncServerClock(fbBaseUrl) {
                     const timeEl = document.getElementById(`time_${idx}`);
                     if (timeEl) timeEl.innerText = displayTime;
 
-                    // Chỉ đồng bộ input nếu admin KHÔNG đang gõ vào ô đó
-                    const inpEl = document.getElementById(`ans_input_${idx}`);
-                    if (inpEl && document.activeElement !== inpEl && ans && inpEl.value === "") {
-                        inpEl.value = ans;
-                    }
-
                     let btnLoai = document.getElementById(`btn_loai_${idx}`);
                     if (eliminatedTeamsLocal.includes(idx)) {
                         rowEl.classList.add('team-eliminated');
@@ -1037,6 +1038,8 @@ async function syncServerClock(fbBaseUrl) {
 
             const sig = JSON.stringify({
                 cur: globalTrangThai.cauHoiHienTai || "",
+                charsId: globalTrangThai.hienKyTuCauHoi || "",
+                showCharsOnly: !!globalTrangThai.showCharsOnly,
                 blur: serverBlurredPieces,
                 qs: sortedKeys.map(k => ({
                     k,
@@ -1064,7 +1067,11 @@ async function syncServerClock(fbBaseUrl) {
                 let len = Number(qDataItem.soKyTu || qDataItem.SoKyTu) || (ans ? ans.toString().normalize('NFC').replace(/\s/g, "").length : 0);
                 let txt = qDataItem.noiDung || qDataItem.NoiDung || "";
 
-                let bg = (id === String(globalTrangThai.cauHoiHienTai)) ? "background:#e6f7ff; border-color:#007bff;" : "";
+                let isCurrent = (id === String(globalTrangThai.cauHoiHienTai));
+                let isShowingChars = (id === String(globalTrangThai.hienKyTuCauHoi || "") && globalTrangThai.showCharsOnly === true);
+                let bg = isCurrent
+                    ? "background:#e6f7ff; border-color:#007bff;"
+                    : (isShowingChars ? "background:#f5f3ff; border-color:#6f42c1;" : "");
                 let label = (id === "5") ? `Câu Trung Tâm - 🎙 Trực tiếp` : `Hàng ${id} - 💻 Máy tính`;
                 let isBlurred = serverBlurredPieces.includes(id);
 
@@ -1077,9 +1084,9 @@ async function syncServerClock(fbBaseUrl) {
                         <div>${txt}</div>
                         <div style="color:green; font-weight:bold; margin-top:4px;">ĐA chuẩn: ${ans}</div>
                         <div class="q-actions">
+                            <button class="btn-chars ${isShowingChars ? 'active' : ''}" onclick="showCharsForQuestion('${id}')">🔤 Hiện ký tự</button>
                             <button class="btn-show" onclick="playQuestionV2('${id}')">Phát 30s</button>
                             <button class="btn-pause" id="btn_pause_${id}" onclick="togglePauseTimer('${id}')" disabled>⏸ Tạm dừng</button>
-                            <button class="btn-ans-q" onclick="showAnswerForQuestion('${id}')">🎉 Đáp án</button>
                             <button class="btn-blur" onclick="toggleBlurPiece('${id}')">${isBlurred ? 'Bỏ làm mờ' : 'Làm mờ mảnh'}</button>
                             <button class="btn-review" onclick="reviewAnswers('${id}')">Xem lại đáp án</button>
                         </div>
@@ -1143,79 +1150,76 @@ async function syncServerClock(fbBaseUrl) {
         }
 
         // ==========================================
-        // GHI TRẠNG THÁI LÊN FIREBASE
+        // HIỂN THỊ KÝ TỰ CHƯỚNG NGẠI VẬT TRƯỚC KHI PHÁT CÂU HỎI
         // ==========================================
-        async function showAnswerForQuestion(id) {
+        async function showCharsForQuestion(id) {
             const strId = String(id);
-            showLoading("Đang hiện đáp án & phát nhạc chào mừng...");
-            try {
-                const triggerTs = Date.now();
-                globalTrangThai.cauHoiHienTai = strId;
-                globalTrangThai.showAnswer = true;
-                globalTrangThai.answerTrigger = triggerTs;
+            const isAlreadyShowing = (String(globalTrangThai.hienKyTuCauHoi || "") === strId && globalTrangThai.showCharsOnly === true);
 
-                if (strId === "5") {
-                    globalTrangThai.manh5 = true;
+            showLoading(isAlreadyShowing ? "Đang ẩn ký tự chướng ngại vật..." : "Đang hiển thị ký tự chướng ngại vật...");
+            try {
+                if (isAlreadyShowing) {
+                    globalTrangThai.hienKyTuCauHoi = "";
+                    globalTrangThai.showCharsOnly = false;
                     await fbPatchState({
-                        cauHoiHienTai: "5",
-                        showAnswer: true,
-                        answerTrigger: triggerTs,
-                        manh1: true, manh2: true, manh3: true, manh4: true, manh5: true,
-                        blurredPieces: ""
+                        hienKyTuCauHoi: "",
+                        showCharsOnly: false
                     });
-                    serverBlurredPieces = [];
+                    await fbPatchMatchState({
+                        hien_kytu: ""
+                    });
                 } else {
-                    const patchObj = {
-                        cauHoiHienTai: strId,
-                        showAnswer: true,
-                        answerTrigger: triggerTs
-                    };
-                    if (["1", "2", "3", "4"].includes(strId)) {
-                        globalTrangThai["manh" + strId] = true;
-                        patchObj["manh" + strId] = true;
-                    }
-                    await fbPatchState(patchObj);
+                    adminTimerEnd = null;
+                    adminTimerPaused = false;
+                    adminTimerRemaining = 0;
+                    globalTrangThai.cauHoiHienTai = "";
+                    globalTrangThai.showAnswer = false;
+                    globalTrangThai.hienKyTuCauHoi = strId;
+                    globalTrangThai.showCharsOnly = true;
+                    lastPlayedTimerKey = "";
+                    lastAnswerSoundKey = "";
+                    stopAllSounds();
+
+                    await Promise.all([
+                        fbPatchState({
+                            cauHoiHienTai: "",
+                            hienKyTuCauHoi: strId,
+                            showCharsOnly: true,
+                            showAnswer: false,
+                            timerEndTime: 0,
+                            timerPaused: false,
+                            timerRemaining: 0
+                        }),
+                        fbPatchMatchState({
+                            cauhoihientai: "PREPARE",
+                            hien_kytu: strId,
+                            thoigian: 0,
+                            config: { show_dapan: false }
+                        })
+                    ]);
                 }
 
-                await fbSend("PATCH", "/match_state/config", { show_dapan: true });
-                checkAndTriggerAnswerSound();
+                renderAdminUI();
                 updateAdminTimerUI();
             } catch (e) {
-                console.error("Lỗi hiện đáp án câu hỏi:", e);
+                console.error("Lỗi hiển thị ký tự chướng ngại vật:", e);
             }
             hideLoading();
         }
 
+        // ==========================================
+        // GHI TRẠNG THÁI LÊN FIREBASE
+        // ==========================================
         async function toggleShowAnswerV2() {
             showLoading("Đang xử lý trạng thái đáp án...");
             try {
                 let willShow = !(globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true");
-                let curQ = String(globalTrangThai.cauHoiHienTai || "");
                 const triggerTs = willShow ? Date.now() : 0;
 
                 globalTrangThai.showAnswer = willShow;
                 globalTrangThai.answerTrigger = triggerTs;
 
-                if (willShow && curQ === "5") {
-                    globalTrangThai.manh5 = true;
-                    await fbPatchState({
-                        showAnswer: true,
-                        answerTrigger: triggerTs,
-                        manh1: true, manh2: true, manh3: true, manh4: true, manh5: true,
-                        blurredPieces: ""
-                    });
-                    serverBlurredPieces = [];
-                } else if (willShow && ["1", "2", "3", "4"].includes(curQ)) {
-                    globalTrangThai["manh" + curQ] = true;
-                    await fbPatchState({
-                        showAnswer: true,
-                        answerTrigger: triggerTs,
-                        ["manh" + curQ]: true
-                    });
-                } else {
-                    await fbPatchState({ showAnswer: willShow, answerTrigger: triggerTs });
-                }
-
+                await fbPatchState({ showAnswer: willShow, answerTrigger: triggerTs });
                 await fbSend("PATCH", "/match_state/config", { show_dapan: willShow });
                 checkAndTriggerAnswerSound();
                 updateAdminTimerUI();
@@ -1233,13 +1237,18 @@ async function syncServerClock(fbBaseUrl) {
                 adminTimerPaused = false;
                 adminTimerRemaining = 0;
                 globalTrangThai.cauHoiHienTai = "";
+                globalTrangThai.hienKyTuCauHoi = "";
+                globalTrangThai.showCharsOnly = false;
                 globalTrangThai.showAnswer = false;
                 lastPlayedTimerKey = "";
                 lastAnswerSoundKey = "";
+                lastAutoRevealedKey = "";
                 stopAllSounds();
 
                 await fbPatchState({
                     cauHoiHienTai: "",
+                    hienKyTuCauHoi: "",
+                    showCharsOnly: false,
                     showAnswer: false,
                     timerEndTime: 0,
                     timerPaused: false,
@@ -1247,9 +1256,11 @@ async function syncServerClock(fbBaseUrl) {
                 });
                 await fbPatchMatchState({
                     cauhoihientai: "PREPARE",
+                    hien_kytu: "",
                     thoigian: 0
                 });
                 await fbSend("PATCH", "/match_state/config", { show_dapan: false });
+                renderAdminUI();
                 updateAdminTimerUI();
             } catch (e) {}
             hideLoading();
@@ -1266,24 +1277,23 @@ async function syncServerClock(fbBaseUrl) {
                 adminTimerPaused = false;
                 adminTimerRemaining = 30000;
                 globalTrangThai.cauHoiHienTai = strId;
+                globalTrangThai.hienKyTuCauHoi = strId;
+                globalTrangThai.showCharsOnly = false;
                 globalTrangThai.showAnswer = false;
                 lastAnswerSoundKey = "";
+                lastAutoRevealedKey = "";
 
                 // Làm mới dữ liệu đáp án ngay tại local
                 globalMatchState.dapan_cacdoi = emptyAnswers;
                 if (currentSubmits[strId]) delete currentSubmits[strId];
                 if (globalCauHoiV2[strId]) globalCauHoiV2[strId].dananthisinh = "";
 
-                // Xóa trắng ô nhập liệu và chữ hiển thị trên giao diện Admin
-                window.teamList.forEach((_, idx) => {
-                    const inp = document.getElementById(`ans_input_${idx}`);
-                    if (inp) inp.value = "";
-                });
-
                 // Ghi đồng thời lên Firebase: trạng thái, reset dapan_cacdoi và xóa lịch sử câu này
                 await Promise.all([
                     fbPatchState({
                         cauHoiHienTai: strId,
+                        hienKyTuCauHoi: strId,
+                        showCharsOnly: false,
                         showAnswer: false,
                         timerEndTime: endTime,
                         timerPaused: false,
@@ -1291,6 +1301,7 @@ async function syncServerClock(fbBaseUrl) {
                     }),
                     fbPatchMatchState({
                         cauhoihientai: strId,
+                        hien_kytu: strId,
                         thoigian: 30,
                         dapan_cacdoi: emptyAnswers,
                         config: { show_dapan: false }
@@ -1322,7 +1333,8 @@ async function syncServerClock(fbBaseUrl) {
                         timerRemaining: remMs
                     });
                 } else {
-                    const newEnd = getServerNow() + adminTimerRemaining;                    adminTimerPaused = false;
+                    const newEnd = getServerNow() + adminTimerRemaining;
+                    adminTimerPaused = false;
                     adminTimerEnd = newEnd;
                     await fbPatchState({
                         timerPaused: false,
@@ -1365,18 +1377,18 @@ async function syncServerClock(fbBaseUrl) {
                     adminTimerPaused = false;
                     adminTimerRemaining = 0;
                     globalTrangThai.cauHoiHienTai = "";
+                    globalTrangThai.hienKyTuCauHoi = "";
+                    globalTrangThai.showCharsOnly = false;
                     globalTrangThai.showAnswer = false;
                     lastPlayedTimerKey = "";
                     lastAnswerSoundKey = "";
+                    lastAutoRevealedKey = "";
                     stopAllSounds();
-
-                    window.teamList.forEach((_, idx) => {
-                        const inp = document.getElementById(`ans_input_${idx}`);
-                        if (inp) inp.value = "";
-                    });
 
                     await fbPatchState({
                         cauHoiHienTai: "",
+                        hienKyTuCauHoi: "",
+                        showCharsOnly: false,
                         blurredPieces: "",
                         showAnswer: false,
                         answerTrigger: 0,
@@ -1387,12 +1399,14 @@ async function syncServerClock(fbBaseUrl) {
                     });
                     await fbPatchMatchState({
                         cauhoihientai: "PREPARE",
+                        hien_kytu: "",
                         thoigian: 0,
                         dapan_cacdoi: buildEmptyDapanCacDoi(),
                         config: { show_dapan: false }
                     });
                     await fbSend("DELETE", "/submittedAnswers");
                     serverBlurredPieces = [];
+                    renderAdminUI();
                     updateAdminTimerUI();
                 } catch (e) {}
                 hideLoading();
