@@ -10,7 +10,7 @@
 
     <style>
         /* =========================================
-           1. HỆ THỐNG MÀU SẮC & BIẾN ĐỒNG BỘ
+1. HỆ THỐNG MÀU SẮC & BIẾN ĐỒNG BỘ
            ========================================= */
         :root {
             --navy-dark: #000b16;
@@ -40,7 +40,7 @@
         }
 
         /* =========================================
-           2. RESET & NỀN CHUNG
+2. RESET & NỀN CHUNG
            ========================================= */
         *, *::before, *::after {
             box-sizing: border-box;
@@ -73,7 +73,7 @@
         }
 
         /* =========================================
-           3. HEADER, ĐỒNG HỒ & PROGRESS BAR
+3. HEADER, ĐỒNG HỒ & PROGRESS BAR
            ========================================= */
         .header {
             width: 100%;
@@ -227,7 +227,7 @@
         }
 
         /* =========================================
-           4. BỐ CỤC CHÍNH (2 CỘT CÂN ĐỐI)
+4. BỐ CỤC CHÍNH (2 CỘT CÂN ĐỐI)
            ========================================= */
         .main-content {
             flex: 1;
@@ -257,7 +257,7 @@
         }
 
         /* =========================================
-           5. KHUNG HÌNH ẢNH & MẢNH GHÉP (KHÓA CỨNG TỶ LỆ 16:9)
+5. KHUNG HÌNH ẢNH & MẢNH GHÉP (KHÓA CỨNG TỶ LỆ 16:9)
            ========================================= */
         .puzzle-wrapper {
             width: 100%;
@@ -370,7 +370,7 @@
         }
 
         /* =========================================
-           6. BẢNG CÂU HỎI & ĐÁP ÁN (CHỮ TO, TỰ CO GIÃN)
+6. BẢNG CÂU HỎI & ĐÁP ÁN (CHỮ TO, TỰ CO GIÃN)
            ========================================= */
         .question-board {
             container-type: inline-size;
@@ -468,7 +468,7 @@
         }
 
         /* =========================================
-           7. BẢNG TỪ KHÓA HÀNG NGANG (TRÒN ĐỀU, TỰ XUỐNG DÒNG)
+7. BẢNG TỪ KHÓA HÀNG NGANG (TRÒN ĐỀU, TỰ XUỐNG DÒNG)
            ========================================= */
         .words-board {
             display: flex;
@@ -543,7 +543,7 @@
         }
 
         /* =========================================
-           8. BẢNG CHƯỚNG NGẠI VẬT
+8. BẢNG CHƯỚNG NGẠI VẬT
            ========================================= */
         .cnv-center-board {
             container-type: inline-size;
@@ -578,7 +578,7 @@
         }
 
         /* =========================================
-           9. THẺ ĐIỂM SỐ & KHUNG NHẬP ĐÁP ÁN THÍ SINH
+9. THẺ ĐIỂM SỐ & KHUNG NHẬP ĐÁP ÁN THÍ SINH
            ========================================= */
         .player-status-grid {
             display: grid;
@@ -768,7 +768,7 @@
         .submit-feedback.err { color: var(--danger); }
 
         /* =========================================
-           10. FIX KHUNG VỪA KHÍT 100VH TRÊN DESKTOP
+10. FIX KHUNG VỪA KHÍT 100VH TRÊN DESKTOP
            ========================================= */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: var(--navy-dark); }
@@ -1013,6 +1013,7 @@
         let scoreFlashTimer = null;
 
         window.fbBlurredArr = [];
+        window.fbRevealedAnswers = [];
         let globalCauHoiV2 = {};
         let globalTrangThai = {};
         let globalMatchState = {};
@@ -1059,6 +1060,23 @@
             if (!qId) return false;
             const s = String(qId).trim().toLowerCase();
             return (s === "5" || s === "cnv" || s === "trungtam");
+        }
+
+        function isQuestionAnswerRevealed(qId) {
+            const strId = String(qId || "");
+            if (!strId) return false;
+            if ((window.fbRevealedAnswers || []).includes(strId)) return true;
+            if (isCenterQuestion(strId) && (window.fbRevealedAnswers || []).some(x => isCenterQuestion(x))) {
+                return true;
+            }
+
+            const curQ = String(globalTrangThai.cauHoiHienTai || "");
+            const globalShow = (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true")
+                || Boolean(globalMatchState.config && globalMatchState.config.show_dapan === true);
+
+            if (curQ === strId && (globalShow || isTimeUpV2)) return true;
+            if (isCenterQuestion(strId) && isCenterQuestion(curQ) && (globalShow || isTimeUpV2)) return true;
+            return false;
         }
 
         function findMyTeam(data) {
@@ -1322,9 +1340,20 @@
                     blurredArr = window.fbBlurredArr || [];
                 }
 
+                // Danh sách các câu đã mở đáp án (hỗ trợ mở nhiều hàng ngang cùng lúc)
+                const rawRevealed = state.revealedAnswers !== undefined
+                    ? state.revealedAnswers
+                    : (globalMatchState.revealed_answers !== undefined ? globalMatchState.revealed_answers : "");
+                window.fbRevealedAnswers = rawRevealed
+                    ? rawRevealed.toString().split(',').map(x => x.trim()).filter(x => x !== "")
+                    : [];
+
+                // Nếu đáp án câu trung tâm (5) đã mở -> tự động mở toàn bộ hình ảnh trung tâm
+                const isCenterAnsShown = isQuestionAnswerRevealed("5");
+
                 ['1', '2', '3', '4'].forEach(num => {
                     const pId = 'p' + num;
-                    const isOpened = (state['manh' + num] === true || state['manh' + num] === "true");
+                    const isOpened = isCenterAnsShown || (state['manh' + num] === true || state['manh' + num] === "true");
                     const isDead = blurredArr.includes(num);
                     const el = document.getElementById(pId);
                     if (el) {
@@ -1336,7 +1365,7 @@
 
                 const p5El = document.getElementById('p5');
                 if (p5El) {
-                    const isOpened5 = (state['manh5'] === true || state['manh5'] === "true");
+                    const isOpened5 = isCenterAnsShown || (state['manh5'] === true || state['manh5'] === "true");
                     const isDead5 = blurredArr.includes('5') || blurredArr.includes('CNV') || blurredArr.includes('TRUNGTAM');
                     const deadCls5 = (isDead5 && !isOpened5) ? 'piece-dead' : '';
                     p5El.className = `piece-center ${isOpened5 ? 'revealed' : ''} ${deadCls5}`.trim();
@@ -1404,8 +1433,7 @@
 
             const curQ = String(globalTrangThai.cauHoiHienTai || "");
             const isCenterQ = isCenterQuestion(curQ);
-            const showAns = (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true")
-                || Boolean(globalMatchState.config && globalMatchState.config.show_dapan === true);
+            const showAns = curQ ? isQuestionAnswerRevealed(curQ) : false;
             const hasSubmitted = hasSubmittedCurrentQuestion();
 
             const canAnswer = Boolean(curQ) && !isCenterQ && !isTimeUpV2 && !timerPausedV2 && !showAns && !hasSubmitted;
@@ -1486,8 +1514,7 @@
         async function submitMyAnswer() {
             const curQ = String(globalTrangThai.cauHoiHienTai || "");
             const isCenterQ = isCenterQuestion(curQ);
-            const showAns = (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true")
-                || Boolean(globalMatchState.config && globalMatchState.config.show_dapan === true);
+            const showAns = curQ ? isQuestionAnswerRevealed(curQ) : false;
 
             if (!curQ || isCenterQ || isTimeUpV2 || timerPausedV2 || showAns || isSubmitting || hasSubmittedCurrentQuestion()) return;
 
@@ -1583,13 +1610,10 @@
                 puzzleImg.style.backgroundImage = `url('${globalTrangThai.linkAnh}')`;
             }
 
-            const currentQ = globalTrangThai.cauHoiHienTai || "";
-            const showAns = (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true")
-                || Boolean(globalMatchState.config && globalMatchState.config.show_dapan === true);
-            const shouldShowAns = showAns || isTimeUpV2;
+            const currentQ = String(globalTrangThai.cauHoiHienTai || "");
             const blurredArr = window.fbBlurredArr || [];
 
-            // 1. Bảng từ khóa hàng ngang 1-4
+            // 1. Bảng từ khóa hàng ngang 1-4 (hỗ trợ mở đồng thời nhiều hàng ngang)
             const wordsBoard = document.getElementById('words-board');
             let wordsHtml = "";
 
@@ -1601,7 +1625,7 @@
                 const answerStr = qData.dapAn ? qData.dapAn.toString().normalize('NFC').toUpperCase().replace(/\s/g, '') : "";
                 const charsCount = Number(qData.soKyTu) || answerStr.length || 0;
                 const isRevealed = (globalTrangThai['manh' + id] === true || globalTrangThai['manh' + id] === "true")
-                    || (shouldShowAns && String(currentQ) === id);
+                    || isQuestionAnswerRevealed(id);
 
                 let circlesHtml = "";
                 for (let c = 0; c < charsCount; c++) {
@@ -1618,10 +1642,11 @@
             }
             wordsBoard.innerHTML = wordsHtml;
 
-            // 2. Bảng Chướng ngại vật
+            // 2. Bảng Chướng ngại vật (hiện khi mở đáp án câu 5 hoặc khi lật mảnh trung tâm manh5)
             const cnvCenterBoard = document.getElementById('cnv-center-board');
             const q5Data = globalCauHoiV2['5'];
-            const isCenterDone = isCenterQuestion(currentQ) && shouldShowAns;
+            const isCenterDone = isQuestionAnswerRevealed('5')
+                || (globalTrangThai.manh5 === true || globalTrangThai.manh5 === "true");
 
             if (cnvCenterBoard) {
                 if (q5Data && (q5Data.soKyTu || q5Data.dapAn)) {
@@ -1668,8 +1693,9 @@
                         (isCenterQ && (blurredArr.includes("CNV") || blurredArr.includes("TRUNGTAM")));
                     const correctAns = qData.dapAn ? qData.dapAn.toString().normalize('NFC') : "";
                     const displayLen = Number(qData.soKyTu) || correctAns.replace(/\s/g, '').length || 0;
+                    const shouldShowThisAns = isQuestionAnswerRevealed(cur);
 
-                    const ansHtml = (shouldShowAns && correctAns !== "")
+                    const ansHtml = (shouldShowThisAns && correctAns !== "")
                         ? `<div class="q-answer-reveal">ĐÁP ÁN: ${escapeHtml(correctAns)}</div>`
                         : "";
 
