@@ -310,7 +310,7 @@
         .q-timer-badge.timeup { background: #cbd5e1; color: #64748b; }
 
         .q-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
-        .btn-chars, .btn-show, .btn-pause, .btn-blur, .btn-review {
+        .btn-chars, .btn-show, .btn-ans, .btn-pause, .btn-blur, .btn-review {
             border: none; padding: 7px 11px; cursor: pointer; border-radius: 6px;
             font-weight: 600; font-size: 0.85rem; transition: 0.2s;
         }
@@ -320,6 +320,10 @@
 
         .btn-show { background: var(--primary-dark); color: #fff; }
         .btn-show:hover { background: #004c99; }
+
+        .btn-ans { background: var(--info); color: #fff; }
+        .btn-ans:hover { background: var(--info-hover); }
+        .btn-ans.active { background: var(--secondary); color: #fff; box-shadow: 0 0 0 2px #cbd5e1; }
 
         .btn-pause { background: #fd7e14; color: #fff; }
         .btn-pause:hover:not(:disabled) { background: #e8590c; }
@@ -516,23 +520,60 @@
             } catch (e) {}
         }
 
+        function isQuestionAnswerRevealed(id) {
+            const strId = String(id || "");
+            if (!strId) return false;
+            if (serverRevealedAnswers.includes(strId)) return true;
+            return (
+                String(globalTrangThai.cauHoiHienTai || "") === strId &&
+                (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true")
+            );
+        }
+
         function isCurrentAnswerRevealed() {
             const curKey = String(globalTrangThai.cauHoiHienTai || "");
             if (!curKey) return false;
-            return (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true");
+            return isQuestionAnswerRevealed(curKey);
         }
 
         function checkAndTriggerAnswerSound() {
-            const curKey = String(globalTrangThai.cauHoiHienTai || "");
-            if (!curKey || !isCurrentAnswerRevealed()) {
+            const hasAnyRevealed = serverRevealedAnswers.length > 0 || (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true");
+            if (!hasAnyRevealed) {
                 lastAnswerSoundKey = "";
                 return;
             }
-            const soundKey = `${curKey}_${globalTrangThai.answerTrigger || ""}`;
+            const soundKey = `${globalTrangThai.cauHoiHienTai || ""}_${serverRevealedAnswers.join(",")}_${globalTrangThai.answerTrigger || ""}`;
             if (lastAnswerSoundKey !== soundKey) {
                 lastAnswerSoundKey = soundKey;
                 stopTimerSound();
                 playSound('welcome', true);
+            }
+        }
+
+        function syncShowAnswerTopButtonUI() {
+            const btnShowAns = document.getElementById('btn-show-ans-v2');
+            if (!btnShowAns) return;
+            if (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true") {
+                btnShowAns.innerText = "🚫 ẨN ĐÁP ÁN KHÁN GIẢ";
+                btnShowAns.style.background = "#6c757d";
+            } else {
+                btnShowAns.innerText = "👁 HIỆN ĐÁP ÁN KHÁN GIẢ";
+                btnShowAns.style.background = "#17a2b8";
+            }
+        }
+
+        function syncPuzzleButtonsUI() {
+            ['1', '2', '3', '4'].forEach(num => {
+                let el = document.getElementById('btn-p' + num);
+                if (el) {
+                    el.className = (globalTrangThai['manh' + num] === true || globalTrangThai['manh' + num] === "true") ? "p-btn opened" : "p-btn";
+                    if (serverBlurredPieces.includes(num)) el.classList.add('blurred');
+                }
+            });
+
+            let p5El = document.getElementById('btn-p5');
+            if (p5El) {
+                p5El.className = (globalTrangThai.manh5 === true || globalTrangThai.manh5 === "true") ? "p-center-btn opened" : "p-center-btn";
             }
         }
 
@@ -622,6 +663,7 @@
         window.teamList = [];
 
         let serverBlurredPieces = [];
+        let serverRevealedAnswers = [];
         let globalCauHoiV2 = {};
         let currentSubmits = {};
         let globalTrangThai = {};
@@ -661,22 +703,29 @@
             const strId = String(id);
             try {
                 const triggerTs = Date.now();
+                if (!serverRevealedAnswers.includes(strId)) {
+                    serverRevealedAnswers.push(strId);
+                }
+                const revealedStr = serverRevealedAnswers.join(',');
+
                 globalTrangThai.showAnswer = true;
                 globalTrangThai.answerTrigger = triggerTs;
+                globalTrangThai.revealedAnswers = revealedStr;
+
+                syncShowAnswerTopButtonUI();
+                renderAdminUI();
 
                 await Promise.all([
                     fbPatchState({
                         showAnswer: true,
-                        answerTrigger: triggerTs
+                        answerTrigger: triggerTs,
+                        revealedAnswers: revealedStr
                     }),
-                    fbSend("PATCH", "/match_state/config", { show_dapan: true })
+                    fbPatchMatchState({
+                        revealed_answers: revealedStr,
+                        config: { show_dapan: true }
+                    })
                 ]);
-
-                let btnShowAns = document.getElementById('btn-show-ans-v2');
-                if (btnShowAns) {
-                    btnShowAns.innerText = "🚫 ẨN ĐÁP ÁN KHÁN GIẢ";
-                    btnShowAns.style.background = "#6c757d";
-                }
 
                 checkAndTriggerAnswerSound();
             } catch (e) {
@@ -880,34 +929,22 @@
                     }
                 }
 
-                let btnShowAns = document.getElementById('btn-show-ans-v2');
-                if (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true") {
-                    btnShowAns.innerText = "🚫 ẨN ĐÁP ÁN KHÁN GIẢ";
-                    btnShowAns.style.background = "#6c757d";
-                } else {
-                    btnShowAns.innerText = "👁 HIỆN ĐÁP ÁN KHÁN GIẢ";
-                    btnShowAns.style.background = "#17a2b8";
-                }
-
                 if (globalTrangThai.blurredPieces !== undefined) {
                     serverBlurredPieces = globalTrangThai.blurredPieces
                         ? globalTrangThai.blurredPieces.toString().split(',').filter(x => x !== "")
                         : [];
                 }
 
-                ['1', '2', '3', '4'].forEach(num => {
-                    let el = document.getElementById('btn-p' + num);
-                    if (el) {
-                        el.className = (globalTrangThai['manh' + num] === true || globalTrangThai['manh' + num] === "true") ? "p-btn opened" : "p-btn";
-                        if (serverBlurredPieces.includes(num)) el.classList.add('blurred');
-                    }
-                });
-
-                let p5El = document.getElementById('btn-p5');
-                if (p5El) {
-                    p5El.className = (globalTrangThai.manh5 === true || globalTrangThai.manh5 === "true") ? "p-center-btn opened" : "p-center-btn";
+                if (globalTrangThai.revealedAnswers !== undefined) {
+                    serverRevealedAnswers = globalTrangThai.revealedAnswers
+                        ? globalTrangThai.revealedAnswers.toString().split(',').filter(x => x !== "")
+                        : [];
+                } else {
+                    serverRevealedAnswers = [];
                 }
 
+                syncShowAnswerTopButtonUI();
+                syncPuzzleButtonsUI();
                 checkAndTriggerAnswerSound();
                 renderAdminUI();
                 updateAdminTimerUI();
@@ -1040,6 +1077,8 @@
                 cur: globalTrangThai.cauHoiHienTai || "",
                 charsId: globalTrangThai.hienKyTuCauHoi || "",
                 showCharsOnly: !!globalTrangThai.showCharsOnly,
+                showAns: globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true",
+                revealed: serverRevealedAnswers,
                 blur: serverBlurredPieces,
                 qs: sortedKeys.map(k => ({
                     k,
@@ -1069,6 +1108,8 @@
 
                 let isCurrent = (id === String(globalTrangThai.cauHoiHienTai));
                 let isShowingChars = (id === String(globalTrangThai.hienKyTuCauHoi || "") && globalTrangThai.showCharsOnly === true);
+                let isThisAnsShown = isQuestionAnswerRevealed(id);
+
                 let bg = isCurrent
                     ? "background:#e6f7ff; border-color:#007bff;"
                     : (isShowingChars ? "background:#f5f3ff; border-color:#6f42c1;" : "");
@@ -1086,6 +1127,7 @@
                         <div class="q-actions">
                             <button class="btn-chars ${isShowingChars ? 'active' : ''}" onclick="showCharsForQuestion('${id}')">🔤 Hiện ký tự</button>
                             <button class="btn-show" onclick="playQuestionV2('${id}')">Phát 30s</button>
+                            <button class="btn-ans ${isThisAnsShown ? 'active' : ''}" id="btn_ans_${id}" onclick="toggleQuestionAnswer('${id}')">${isThisAnsShown ? '🚫 Ẩn ĐA' : '👁 Hiện ĐA'}</button>
                             <button class="btn-pause" id="btn_pause_${id}" onclick="togglePauseTimer('${id}')" disabled>⏸ Tạm dừng</button>
                             <button class="btn-blur" onclick="toggleBlurPiece('${id}')">${isBlurred ? 'Bỏ làm mờ' : 'Làm mờ mảnh'}</button>
                             <button class="btn-review" onclick="reviewAnswers('${id}')">Xem lại đáp án</button>
@@ -1199,6 +1241,7 @@
                     ]);
                 }
 
+                syncShowAnswerTopButtonUI();
                 renderAdminUI();
                 updateAdminTimerUI();
             } catch (e) {
@@ -1208,22 +1251,176 @@
         }
 
         // ==========================================
-        // GHI TRẠNG THÁI LÊN FIREBASE
+        // GHI TRẠNG THÁI ĐÁP ÁN LÊN FIREBASE (TỔNG & TỪNG CÂU ĐỘC LẬP)
         // ==========================================
         async function toggleShowAnswerV2() {
             showLoading("Đang xử lý trạng thái đáp án...");
             try {
+                const curQ = String(globalTrangThai.cauHoiHienTai || "");
                 let willShow = !(globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true");
                 const triggerTs = willShow ? Date.now() : 0;
 
+                if (curQ) {
+                    if (willShow) {
+                        if (!serverRevealedAnswers.includes(curQ)) serverRevealedAnswers.push(curQ);
+                    } else {
+                        serverRevealedAnswers = serverRevealedAnswers.filter(x => x !== curQ);
+                    }
+                } else if (!willShow) {
+                    serverRevealedAnswers = [];
+                }
+
+                const revealedStr = serverRevealedAnswers.join(',');
                 globalTrangThai.showAnswer = willShow;
                 globalTrangThai.answerTrigger = triggerTs;
+                globalTrangThai.revealedAnswers = revealedStr;
 
-                await fbPatchState({ showAnswer: willShow, answerTrigger: triggerTs });
-                await fbSend("PATCH", "/match_state/config", { show_dapan: willShow });
+                const statePatch = {
+                    showAnswer: willShow,
+                    answerTrigger: triggerTs,
+                    revealedAnswers: revealedStr
+                };
+
+                // Nếu đang ở câu trung tâm (5) và bật hiện đáp án -> mở toàn bộ hình trung tâm
+                if (willShow && curQ === "5") {
+                    globalTrangThai.manh1 = true;
+                    globalTrangThai.manh2 = true;
+                    globalTrangThai.manh3 = true;
+                    globalTrangThai.manh4 = true;
+                    globalTrangThai.manh5 = true;
+                    serverBlurredPieces = [];
+                    Object.assign(statePatch, {
+                        manh1: true, manh2: true, manh3: true, manh4: true, manh5: true,
+                        blurredPieces: ""
+                    });
+                }
+
+                await Promise.all([
+                    fbPatchState(statePatch),
+                    fbPatchMatchState({
+                        revealed_answers: revealedStr,
+                        config: { show_dapan: willShow }
+                    })
+                ]);
+
+                syncShowAnswerTopButtonUI();
+                syncPuzzleButtonsUI();
                 checkAndTriggerAnswerSound();
+                renderAdminUI();
                 updateAdminTimerUI();
-            } catch (e) {}
+            } catch (e) {
+                console.error("Lỗi bật/tắt đáp án:", e);
+            }
+            hideLoading();
+        }
+
+        async function toggleQuestionAnswer(id) {
+            const strId = String(id);
+            const willShow = !isQuestionAnswerRevealed(strId);
+
+            showLoading(willShow ? "Đang hiển thị đáp án..." : "Đang ẩn đáp án...");
+            try {
+                if (willShow) {
+                    if (!serverRevealedAnswers.includes(strId)) {
+                        serverRevealedAnswers.push(strId);
+                    }
+                } else {
+                    serverRevealedAnswers = serverRevealedAnswers.filter(x => x !== strId);
+                }
+
+                const revealedStr = serverRevealedAnswers.join(',');
+                const triggerTs = willShow ? Date.now() : (globalTrangThai.answerTrigger || 0);
+
+                // Xác định câu hỏi đang hiển thị và trạng thái showAnswer tương thích ngược
+                let nextCurQ = String(globalTrangThai.cauHoiHienTai || "");
+                let nextShowAns = (globalTrangThai.showAnswer === true || globalTrangThai.showAnswer === "true");
+
+                if (willShow) {
+                    nextCurQ = strId;
+                    nextShowAns = true;
+                } else if (nextCurQ === strId) {
+                    if (serverRevealedAnswers.length > 0) {
+                        nextCurQ = serverRevealedAnswers[serverRevealedAnswers.length - 1];
+                        nextShowAns = true;
+                    } else {
+                        nextShowAns = false;
+                    }
+                }
+
+                globalTrangThai.cauHoiHienTai = nextCurQ;
+                globalTrangThai.showAnswer = nextShowAns;
+                globalTrangThai.answerTrigger = triggerTs;
+                globalTrangThai.revealedAnswers = revealedStr;
+
+                if (willShow && strId === "5") {
+                    adminTimerEnd = null;
+                    adminTimerPaused = false;
+                    adminTimerRemaining = 0;
+                    globalTrangThai.hienKyTuCauHoi = "5";
+                    globalTrangThai.showCharsOnly = false;
+                    globalTrangThai.manh1 = true;
+                    globalTrangThai.manh2 = true;
+                    globalTrangThai.manh3 = true;
+                    globalTrangThai.manh4 = true;
+                    globalTrangThai.manh5 = true;
+                    serverBlurredPieces = [];
+                    lastPlayedTimerKey = "";
+                    lastAutoRevealedKey = "";
+                    stopTimerSound();
+                } else if (willShow && !nextCurQ) {
+                    globalTrangThai.hienKyTuCauHoi = strId;
+                    globalTrangThai.showCharsOnly = false;
+                }
+
+                const statePatch = {
+                    cauHoiHienTai: nextCurQ,
+                    showAnswer: nextShowAns,
+                    answerTrigger: triggerTs,
+                    revealedAnswers: revealedStr
+                };
+
+                const matchPatch = {
+                    cauhoihientai: nextCurQ || "PREPARE",
+                    revealed_answers: revealedStr,
+                    config: { show_dapan: nextShowAns }
+                };
+
+                // Ấn vô đáp án câu trung tâm (5) -> mở lên cả hình trung tâm và 4 ô xung quanh
+                if (willShow && strId === "5") {
+                    Object.assign(statePatch, {
+                        hienKyTuCauHoi: "5",
+                        showCharsOnly: false,
+                        timerEndTime: 0,
+                        timerPaused: false,
+                        timerRemaining: 0,
+                        manh1: true,
+                        manh2: true,
+                        manh3: true,
+                        manh4: true,
+                        manh5: true,
+                        blurredPieces: ""
+                    });
+                    Object.assign(matchPatch, {
+                        hien_kytu: "5",
+                        thoigian: 0
+                    });
+                }
+
+                await Promise.all([
+                    fbPatchState(statePatch),
+                    fbPatchMatchState(matchPatch)
+                ]);
+
+                syncShowAnswerTopButtonUI();
+                syncPuzzleButtonsUI();
+                if (willShow) {
+                    checkAndTriggerAnswerSound();
+                }
+                renderAdminUI();
+                updateAdminTimerUI();
+            } catch (e) {
+                console.error("Lỗi bật/tắt đáp án từng câu:", e);
+            }
             hideLoading();
         }
 
@@ -1260,6 +1457,7 @@
                     thoigian: 0
                 });
                 await fbSend("PATCH", "/match_state/config", { show_dapan: false });
+                syncShowAnswerTopButtonUI();
                 renderAdminUI();
                 updateAdminTimerUI();
             } catch (e) {}
@@ -1273,6 +1471,10 @@
                 const endTime = getServerNow() + 30000;
                 const emptyAnswers = buildEmptyDapanCacDoi();
 
+                // Chỉ ẩn đáp án của chính câu đang phát lại, giữ nguyên các câu hàng ngang khác đã mở
+                serverRevealedAnswers = serverRevealedAnswers.filter(x => x !== strId);
+                const revealedStr = serverRevealedAnswers.join(',');
+
                 adminTimerEnd = endTime;
                 adminTimerPaused = false;
                 adminTimerRemaining = 30000;
@@ -1280,6 +1482,7 @@
                 globalTrangThai.hienKyTuCauHoi = strId;
                 globalTrangThai.showCharsOnly = false;
                 globalTrangThai.showAnswer = false;
+                globalTrangThai.revealedAnswers = revealedStr;
                 lastAnswerSoundKey = "";
                 lastAutoRevealedKey = "";
 
@@ -1295,6 +1498,7 @@
                         hienKyTuCauHoi: strId,
                         showCharsOnly: false,
                         showAnswer: false,
+                        revealedAnswers: revealedStr,
                         timerEndTime: endTime,
                         timerPaused: false,
                         timerRemaining: 30000
@@ -1303,12 +1507,14 @@
                         cauhoihientai: strId,
                         hien_kytu: strId,
                         thoigian: 30,
+                        revealed_answers: revealedStr,
                         dapan_cacdoi: emptyAnswers,
                         config: { show_dapan: false }
                     }),
                     fbSend("DELETE", `/submittedAnswers/${strId}`)
                 ]);
 
+                syncShowAnswerTopButtonUI();
                 renderAdminUI();
                 updateAdminTimerUI();
             } catch (error) {
@@ -1380,6 +1586,7 @@
                     globalTrangThai.hienKyTuCauHoi = "";
                     globalTrangThai.showCharsOnly = false;
                     globalTrangThai.showAnswer = false;
+                    globalTrangThai.revealedAnswers = "";
                     lastPlayedTimerKey = "";
                     lastAnswerSoundKey = "";
                     lastAutoRevealedKey = "";
@@ -1390,6 +1597,7 @@
                         hienKyTuCauHoi: "",
                         showCharsOnly: false,
                         blurredPieces: "",
+                        revealedAnswers: "",
                         showAnswer: false,
                         answerTrigger: 0,
                         timerEndTime: 0,
@@ -1401,11 +1609,15 @@
                         cauhoihientai: "PREPARE",
                         hien_kytu: "",
                         thoigian: 0,
+                        revealed_answers: "",
                         dapan_cacdoi: buildEmptyDapanCacDoi(),
                         config: { show_dapan: false }
                     });
                     await fbSend("DELETE", "/submittedAnswers");
                     serverBlurredPieces = [];
+                    serverRevealedAnswers = [];
+                    syncShowAnswerTopButtonUI();
+                    syncPuzzleButtonsUI();
                     renderAdminUI();
                     updateAdminTimerUI();
                 } catch (e) {}
@@ -1432,6 +1644,7 @@
                         blurredPieces: ""
                     });
                     serverBlurredPieces = [];
+                    syncPuzzleButtonsUI();
                 } catch (e) {}
                 hideLoading();
             } else {
@@ -1441,6 +1654,7 @@
                 try {
                     globalTrangThai["manh" + num] = targetState;
                     await fbPatchState({ ["manh" + num]: targetState });
+                    syncPuzzleButtonsUI();
                 } catch (e) {}
                 hideLoading();
             }
